@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hmac
+import html
 
 import streamlit as st
 
@@ -63,9 +64,42 @@ def get_connection() -> db.Database:
     raise AssertionError  # pragma: no cover
 
 
-def setup_page(title: str, icon: str = "🎯") -> tuple[db.Database, config.AppConfig, config.Profile]:
+CSS = """
+<style>
+.block-container {max-width: 1280px; padding-top: 2.4rem;}
+h1 {letter-spacing: -0.02em;}
+[data-testid="stMetricLabel"] p {font-size: 0.85rem; opacity: 0.75;}
+.scout-label {font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.6; margin-bottom: 0.1rem;}
+.scout-value {font-size: 0.98rem; font-weight: 500; margin-bottom: 0.75rem;}
+</style>
+"""
+
+
+def score_color(score: float | None, eliminated: bool = False) -> str:
+    """Couleur de badge pour un score."""
+    if eliminated or score is None:
+        return "gray"
+    return "green" if score >= 75 else "orange" if score >= 50 else "red"
+
+
+def metric_card(label: str, value: object, help: str | None = None) -> None:
+    """Indicateur dans un cadre."""
+    with st.container(border=True):
+        st.metric(label, value, help=help)
+
+
+def field(label: str, value: object) -> None:
+    """Petit bloc « libellé / valeur » (valeur absente → « non précisé »)."""
+    shown = html.escape(str(value)) if value not in (None, "", []) else "<span style='opacity:.5'>non précisé</span>"
+    st.markdown(f"<div class='scout-label'>{html.escape(label)}</div><div class='scout-value'>{shown}</div>",
+                unsafe_allow_html=True)
+
+
+def setup_page(title: str, icon: str = ":material/target:", subtitle: str = ""
+               ) -> tuple[db.Database, config.AppConfig, config.Profile]:
     """À appeler en tête de chaque page. Renvoie (connexion, config, profil)."""
     st.set_page_config(page_title=f"{title} · Internship Scout", page_icon=icon, layout="wide")
+    st.markdown(CSS, unsafe_allow_html=True)
     require_password()
     if config.SECRETS_ERREUR:
         st.warning(f"Secrets Streamlit illisibles : {config.SECRETS_ERREUR}")
@@ -90,5 +124,9 @@ def setup_page(title: str, icon: str = "🎯") -> tuple[db.Database, config.AppC
             st.caption("Base : Postgres")
         elif config.on_streamlit_cloud():
             st.warning("Base SQLite temporaire : effacée au redémarrage de l'app. Ajoute DATABASE_URL (base Postgres, ex. Neon).")
+    with st.sidebar:
+        st.caption("Internship Scout · recherche de stage")
     st.title(title)
+    if subtitle:
+        st.caption(subtitle)
     return conn, cfg, profile

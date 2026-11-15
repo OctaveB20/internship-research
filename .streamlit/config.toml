@@ -1,0 +1,41 @@
+# Thème sobre : bleu marine, gris clairs, coins arrondis. Mode clair et mode sombre (menu ⋮ → Settings).
+[theme]
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+headingFont = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+headingFontWeights = [700, 600, 600, 600, 600, 600]
+baseRadius = "0.6rem"
+buttonRadius = "0.5rem"
+showWidgetBorder = true
+showSidebarBorder = true
+metricValueFontSize = "1.6rem"
+
+[theme.light]
+primaryColor = "#1F4E79"
+linkColor = "#1F4E79"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F3F5F8"
+textColor = "#1E2530"
+borderColor = "#E2E7EE"
+dataframeBorderColor = "#E2E7EE"
+dataframeHeaderBackgroundColor = "#F3F5F8"
+
+[theme.light.sidebar]
+backgroundColor = "#F7F9FB"
+secondaryBackgroundColor = "#FFFFFF"
+
+[theme.dark]
+primaryColor = "#8AB4E8"
+linkColor = "#8AB4E8"
+backgroundColor = "#12161C"
+secondaryBackgroundColor = "#1B2129"
+textColor = "#E4E8EE"
+borderColor = "#2A323D"
+dataframeBorderColor = "#2A323D"
+dataframeHeaderBackgroundColor = "#1B2129"
+
+[theme.dark.sidebar]
+backgroundColor = "#161B22"
+secondaryBackgroundColor = "#1B2129"
+
+[client]
+toolbarMode = "minimal"   # masque le bouton « Deploy »

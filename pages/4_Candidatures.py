@@ -6,7 +6,7 @@ import streamlit as st
 
 from src import db, export, offers, ui
 
-conn, cfg, profile = ui.setup_page("Candidatures", "🗂️")
+conn, cfg, profile = ui.setup_page("Candidatures", ":material/view_kanban:", "Suis tes candidatures et exporte tout en Excel.")
 rows = offers.load_offers(conn)
 if not rows:
     st.info("Aucune offre pour l'instant : lance une collecte dans la page Recherche.")
@@ -14,18 +14,21 @@ if not rows:
 
 st.download_button("Exporter toutes les offres (Excel)", export.offers_to_excel(rows),
                    f"offres_stage_{date.today():%Y-%m-%d}.xlsx",
-                   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", icon=":material/download:")
 
 # ---------- Kanban ----------
 followed = [s for s in db.STATUSES if s != db.DEFAULT_STATUS]
 cols = st.columns(len(followed))
 for col, status in zip(cols, followed):
     items = [r for r in rows if r["statut"] == status]
-    col.markdown(f"**{status.capitalize()}** ({len(items)})")
+    col.markdown(f"**{status.capitalize()}** · {len(items)}")
     for r in items:
-        col.markdown(f"<div style='border:1px solid #8884;border-radius:8px;padding:6px;margin-bottom:6px;"
-                     f"font-size:0.85em'><b>{r['titre']}</b><br>{r['entreprise']} · {r['score'] or 0:.0f}/100</div>",
-                     unsafe_allow_html=True)
+        with col.container(border=True):
+            st.markdown(f"**{r['titre']}**")
+            st.caption(f"{r['entreprise']} · {r['ville'] or '?'}")
+            st.badge(f"{r['score'] or 0:.0f}/100", color=ui.score_color(r["score"], r["éliminée"]))
+            if r["lien"]:
+                st.markdown(f"[Ouvrir l'offre ↗]({r['lien']})")
 st.caption(f"{sum(r['statut'] == db.DEFAULT_STATUS for r in rows)} offre(s) encore « à voir ».")
 
 # ---------- Édition rapide ----------
@@ -35,12 +38,15 @@ editable = [r for r in rows if show_all or r["statut"] != db.DEFAULT_STATUS]
 if not editable:
     st.caption("Aucune candidature suivie : passe une offre en « intéressant » (ici ou dans la page Offres).")
     editable = [r for r in rows if not r["éliminée"]]
-df = pd.DataFrame(editable)[["job_id", "titre", "entreprise", "score", "statut", "notes"]]
+df = pd.DataFrame(editable)[["job_id", "titre", "entreprise", "score", "statut", "notes", "lien"]]
 edited = st.data_editor(
-    df, hide_index=True, width="stretch", disabled=["job_id", "titre", "entreprise", "score"],
-    column_config={"job_id": None, "statut": st.column_config.SelectboxColumn("statut", options=list(db.STATUSES), required=True),
-                   "notes": st.column_config.TextColumn("notes", width="large"),
-                   "score": st.column_config.NumberColumn("score", format="%.0f")},
+    df, hide_index=True, width="stretch", disabled=["job_id", "titre", "entreprise", "score", "lien"],
+    column_config={"job_id": None, "titre": st.column_config.TextColumn("Titre", width="large"),
+                   "entreprise": "Entreprise",
+                   "statut": st.column_config.SelectboxColumn("Statut", options=list(db.STATUSES), required=True),
+                   "notes": st.column_config.TextColumn("Notes", width="large"),
+                   "score": st.column_config.NumberColumn("Score", format="%.0f"),
+                   "lien": st.column_config.LinkColumn("Lien", display_text="Ouvrir ↗")},
     key="apps_editor",
 )
 if st.button("Enregistrer les modifications", type="primary"):

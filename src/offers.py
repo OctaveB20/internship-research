@@ -7,6 +7,8 @@ from typing import Any, Iterable
 from src import db
 
 MODE_LABELS = {"onsite": "sur site", "hybrid": "hybride", "remote": "remote", "unknown": "?"}
+CONTRACT_LABELS = {"stage": "stage", "alternance": "alternance", "VIE": "VIE", "working_student": "Werkstudent",
+                   "autre": "autre (CDI, CDD…)"}
 
 
 def flatten(row: dict[str, Any]) -> dict[str, Any]:
@@ -15,6 +17,7 @@ def flatten(row: dict[str, Any]) -> dict[str, Any]:
     bd = row.get("breakdown") or {}
     lo, hi = ex.get("duration_months_min"), ex.get("duration_months_max")
     start = ex.get("start_date_earliest")
+    langs = ex.get("languages") or []
     return {
         "job_id": row["job_id"],
         "titre": row.get("job_title"),
@@ -36,6 +39,14 @@ def flatten(row: dict[str, Any]) -> dict[str, Any]:
         "source": row.get("job_publisher"),
         "publiée": (row.get("job_posted_at_datetime_utc") or "")[:10],
         "extraite": bool(ex),
+        "contrat": CONTRACT_LABELS.get(ex.get("contract_type"), "") if ex else "",
+        "compétences": ", ".join(ex.get("required_skills") or []),
+        "atouts": ", ".join(ex.get("nice_to_have_skills") or []),
+        "langues": ", ".join(f"{l['lang']}" + (f" ({l['level']})" if l.get("level") else "") for l in langs),
+        "niveau": ex.get("education_level") or "",
+        "convention": {True: "oui", False: "non"}.get(ex.get("requires_convention"), ""),
+        "début_texte": ex.get("start_date_text") or "",
+        "résumé": ex.get("summary_fr") or "",
     }
 
 

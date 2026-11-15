@@ -3,7 +3,7 @@ import streamlit as st
 
 from src import chat, llm, ui
 
-conn, cfg, profile = ui.setup_page("Chat", "💬")
+conn, cfg, profile = ui.setup_page("Chat", ":material/chat:", "Pose tes questions sur les offres de la base.")
 st.caption("Exemples : « Quelles offres FP&A à Munich ? », « Les 3 meilleures offres qui commencent en janvier », "
            "« Pourquoi l'offre Kestrel est éliminée ? »")
 

@@ -7,7 +7,8 @@ import streamlit as st
 
 from src import config, criteria as crit, extract, jsearch, llm, scoring, ui
 
-conn, cfg, _ = ui.setup_page("Recherche", "🔎")
+conn, cfg, _ = ui.setup_page("Recherche", ":material/search:",
+                              "Choisis tes critères, puis lance la collecte, l'extraction IA et le calcul des scores.")
 base_profile = config.load_profile()
 saved = crit.load(conn, base_profile, cfg)
 months = crit.upcoming_months(date.today(), 15)
@@ -36,31 +37,32 @@ st.text_input("Intitulé(s) recherché(s)", key="crit_titles",
                    "du pays (Praktikum… pour l'Allemagne, stage… pour la France).")
 
 # ---------- Pays ----------
-st.markdown("**Pays**")
-b1, b2, b3, _ = st.columns([1, 1, 1, 4])
-b1.button("Toute l'Europe", on_click=set_all, args=("c_", crit.EUROPE, True))
-b2.button("Aucun", on_click=set_all, args=("c_", crit.EUROPE, False))
-b3.button("France + Allemagne", on_click=lambda: (set_all("c_", crit.EUROPE, False),
+box_countries = st.container(border=True)
+box_countries.markdown("**Pays**")
+row = box_countries.container(horizontal=True)
+row.button("Toute l'Europe", on_click=set_all, args=("c_", crit.EUROPE, True))
+row.button("Aucun", on_click=set_all, args=("c_", crit.EUROPE, False))
+row.button("France + Allemagne", on_click=lambda: (set_all("c_", crit.EUROPE, False),
                                                   set_all("c_", ["France", "Germany"], True)))
-cols = st.columns(6)
+cols = box_countries.columns(6)
 for i, (name, (code, label)) in enumerate(sorted(crit.EUROPE.items(), key=lambda kv: kv[1][1])):
     cols[i % 6].checkbox(label, key=f"c_{name}")
 
 # ---------- Mois de début et durée ----------
-left, right = st.columns([3, 2])
-with left:
+left, right = st.columns([5, 3])
+with left.container(border=True):
     st.markdown("**Mois de début**")
-    m1, m2, _ = st.columns([1, 1, 3])
-    m1.button("Tous les mois", on_click=set_all, args=("m_", months, True))
-    m2.button("Aucun mois", on_click=set_all, args=("m_", months, False), help="Aucun = pas de contrainte")
-    mcols = st.columns(5)
+    row = st.container(horizontal=True)
+    row.button("Tous les mois", on_click=set_all, args=("m_", months, True))
+    row.button("Aucun mois", on_click=set_all, args=("m_", months, False), help="Aucun = pas de contrainte")
+    mcols = st.columns(4)
     for i, ym in enumerate(months):
-        mcols[i % 5].checkbox(crit.month_label(ym), key=f"m_{ym}")
-with right:
+        mcols[i % 4].checkbox(crit.month_label(ym), key=f"m_{ym}")
+with right.container(border=True):
     st.markdown("**Durée du stage**")
-    dcols = st.columns(4)
+    dcols = st.columns(3)
     for i, d in enumerate(crit.DURATIONS):
-        dcols[i % 4].checkbox(f"{d} mois", key=f"d_{d}")
+        dcols[i % 3].checkbox(f"{d} mois", key=f"d_{d}")
     st.caption("Aucune case = toutes durées.")
 
 # ---------- Autres critères ----------
@@ -94,12 +96,17 @@ st.divider()
 q = jsearch.quota_status(conn, cfg.quota_soft_limit)
 n_req = 0 if (current is None or config.dev_mode()) else current.request_count()
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("Requêtes JSearch ce mois", f"{q['used']} / {q['plan_limit']}")
-c2.metric("Encore possibles", q["remaining"], help=f"Plafond de l'app : {q['soft_limit']} (config.yaml)")
 real_req = current.request_count() if current else 0
-c3.metric("Cette recherche", f"{real_req} requête(s)" + (" (0 en mode dev)" if config.dev_mode() else ""),
-          help="Intitulés × pays × pages. 0 si déjà faite aujourd'hui (cache).")
-c4.metric("Après", max(0, q["remaining"] - n_req))
+with c1:
+    ui.metric_card("Requêtes JSearch ce mois", f"{q['used']} / {q['plan_limit']}")
+with c2:
+    ui.metric_card("Encore possibles", q["remaining"], f"Plafond de l'app : {q['soft_limit']} (config.yaml)")
+with c3:
+    ui.metric_card("Cette recherche", real_req,
+                   "Intitulés × pays × pages. 0 si déjà faite aujourd'hui (cache)."
+                   + (" En mode dev, aucune n'est envoyée." if config.dev_mode() else ""))
+with c4:
+    ui.metric_card("Après", max(0, q["remaining"] - n_req))
 st.progress(min(q["used"] / q["plan_limit"], 1.0))
 too_big = n_req > q["remaining"]
 if problems:
@@ -111,10 +118,11 @@ elif current:
     st.caption(f"{len(current.titles)} intitulé(s) × {len(current.countries)} pays × {current.pages} page(s) · "
                + crit.describe(current))
 
-a1, a2 = st.columns([1, 3])
-save_only = a1.button("Enregistrer les critères", disabled=current is None,
+row = st.container(horizontal=True)
+save_only = row.button("Enregistrer les critères", disabled=current is None,
                       help="Enregistre et recalcule les scores des offres déjà en base. Gratuit, aucun appel.")
-launch = a2.button("Lancer la recherche", type="primary", disabled=current is None or too_big)
+launch = row.button("Lancer la recherche", type="primary", icon=":material/rocket_launch:",
+                   disabled=current is None or too_big)
 
 if (save_only or launch) and current:
     crit.save(conn, current)

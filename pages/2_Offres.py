@@ -1,87 +1,185 @@
-"""Offres : tableau filtrable trié par score + détail d'une offre."""
+"""Offres : tableau filtrable trié par score, avec lien et critères extraits, + fiche détaillée."""
+import json
+
 import pandas as pd
 import streamlit as st
 
 from src import db, offers, ui
 
-conn, cfg, profile = ui.setup_page("Offres", "📋")
+conn, cfg, profile = ui.setup_page("Offres", ":material/work:", "Triées par score. Clique sur une ligne pour voir la fiche.")
 rows = offers.load_offers(conn)
 if not rows:
-    st.info("Aucune offre pour l'instant : lance une collecte dans la page Recherche.")
+    st.info("Aucune offre pour l'instant : lance une recherche dans la page Recherche.")
     st.stop()
 
+COLUMNS = {  # clé interne → (titre affiché, configuration)
+    "score": ("Score", st.column_config.ProgressColumn("Score", min_value=0, max_value=100, format="%.0f", width="small")),
+    "titre": ("Titre", st.column_config.TextColumn("Titre", width="large")),
+    "entreprise": ("Entreprise", st.column_config.TextColumn("Entreprise", width="medium")),
+    "ville": ("Ville", None), "pays": ("Pays", None), "mode": ("Mode", None), "contrat": ("Contrat", None),
+    "durée": ("Durée", None),
+    "début": ("Début", st.column_config.DateColumn("Début", format="DD/MM/YYYY")),
+    "gratification": ("Gratification", st.column_config.NumberColumn("Gratification", format="%.0f €")),
+    "domaine": ("Domaine", None), "compétences": ("Compétences", st.column_config.TextColumn("Compétences", width="medium")),
+    "langues": ("Langues", None), "niveau": ("Niveau", None), "statut": ("Statut", None),
+    "publiée": ("Publiée", None), "source": ("Source", None),
+    "lien": ("Lien", st.column_config.LinkColumn("Lien", display_text="Ouvrir ↗", width="small")),
+    "raisons": ("Éliminée car", None),
+}
+DEFAULT_COLUMNS = ["score", "titre", "entreprise", "ville", "pays", "mode", "durée", "début", "gratification",
+                   "compétences", "langues", "statut", "lien"]
+
+# ---------- Filtres ----------
 with st.sidebar:
-    st.header("Filtres")
+    st.subheader("Filtres")
     min_score = st.slider("Score minimum", 0, 100, 0, 5)
-    countries = st.multiselect("Pays", sorted({r["pays"] for r in rows if r["pays"]}))
+    countries = st.multiselect("Pays", sorted({r["pays"] for r in rows if r["pays"]}), placeholder="Tous")
     max_duration = st.slider("Durée max (mois)", 1, 12, 12)
     use_start = st.checkbox("Début avant le…")
     start_before = st.date_input("Début avant", profile.latest_start, disabled=not use_start) if use_start else None
-    modes = st.multiselect("Mode", sorted({r["mode"] for r in rows}))
-    domains = st.multiselect("Domaine", sorted({r["domaine"] for r in rows if r["domaine"]}))
+    modes = st.multiselect("Mode", sorted({r["mode"] for r in rows}), placeholder="Tous")
+    domains = st.multiselect("Domaine", sorted({r["domaine"] for r in rows if r["domaine"]}), placeholder="Tous")
     hide_elim = st.checkbox("Masquer les éliminées", value=True)
+    st.subheader("Affichage")
+    columns = st.multiselect("Colonnes du tableau", list(COLUMNS), default=DEFAULT_COLUMNS,
+                             format_func=lambda c: COLUMNS[c][0], placeholder="Choisir")
 
 shown = offers.filter_offers(rows, min_score=min_score, countries=countries,
                              max_duration=None if max_duration == 12 else max_duration,
                              start_before=start_before, modes=modes, domains=domains, hide_eliminated=hide_elim)
-st.caption(f"{len(shown)} offre(s) affichée(s) sur {len(rows)} (doublons fusionnés).")
+
+kept = [r for r in rows if r["extraite"] and not r["éliminée"]]
+m1, m2, m3, m4 = st.columns(4)
+with m1:
+    ui.metric_card("Affichées", f"{len(shown)} / {len(rows)}", "Doublons fusionnés.")
+with m2:
+    ui.metric_card("Retenues", len(kept), "Extraites et non éliminées par tes critères.")
+with m3:
+    ui.metric_card("Score ≥ 75", sum((r["score"] or 0) >= 75 for r in kept))
+with m4:
+    ui.metric_card("Avec gratification", sum(bool(r["gratification"]) for r in kept))
+
 if not shown:
     st.warning("Aucune offre ne passe les filtres.")
     st.stop()
 
-df = pd.DataFrame(shown)[["titre", "entreprise", "ville", "mode", "durée", "début", "score", "statut"]]
+columns = columns or DEFAULT_COLUMNS
+df = pd.DataFrame(shown)[columns]
+for col in df.columns:  # cases vides plutôt que « None » ou « ? »
+    if df[col].dtype == object and col not in ("début",):
+        df[col] = df[col].map(lambda v: "—" if v in (None, "", "?") else v)
 event = st.dataframe(
     df, hide_index=True, width="stretch", on_select="rerun", selection_mode="single-row",
-    column_config={"score": st.column_config.ProgressColumn("score", min_value=0, max_value=100, format="%.0f"),
-                   "début": st.column_config.DateColumn("début", format="DD/MM/YYYY")},
+    height=min(36 * (len(df) + 1) + 3, 460),
+    column_config={c: (COLUMNS[c][1] or COLUMNS[c][0]) for c in columns},
 )
 selected = event.selection.rows
+offer = shown[selected[0]] if selected else shown[0]
 if not selected:
-    st.caption("Clique sur une ligne pour voir le détail.")
-    st.stop()
+    st.caption("Fiche de la 1re offre ci-dessous. Clique sur une ligne du tableau pour en voir une autre.")
 
-# ---------- Détail ----------
-offer = shown[selected[0]]
+# ---------- Fiche ----------
 job_id = offer["job_id"]
+job = db.get_job(conn, job_id) or {}
+raw = json.loads(job.get("raw_json") or "{}")
 extraction = db.get_extraction(conn, job_id) or {}
 score = db.get_score(conn, job_id)
-st.divider()
-st.subheader(f"{offer['titre']} — {offer['entreprise']}")
+bd = score["breakdown"] if score else {}
+
+with st.container(border=True):
+    head, actions = st.columns([3, 1], vertical_alignment="center")
+    with head:
+        st.subheader(offer["titre"] or "Sans titre")
+        st.markdown(f"**{offer['entreprise'] or '?'}** · {offer['ville'] or 'ville ?'}, {offer['pays'] or 'pays ?'}")
+        with st.container(horizontal=True):
+            if score:
+                st.badge(f"{score['score']:.0f}/100" if not bd.get("eliminated") else "éliminée",
+                         color=ui.score_color(score["score"], bd.get("eliminated")), icon=":material/star:")
+            if offer["mode"] != "?":
+                st.badge(offer["mode"], color="gray", icon=":material/home_work:")
+            if offer["contrat"]:
+                st.badge(offer["contrat"], color="gray", icon=":material/badge:")
+            if offer["durée"]:
+                st.badge(offer["durée"], color="gray", icon=":material/schedule:")
+            if offer["début"]:
+                st.badge(f"début {offer['début']:%d/%m/%Y}", color="gray", icon=":material/event:")
+            if offer["gratification"]:
+                st.badge(f"{offer['gratification']:.0f} €/mois", color="gray", icon=":material/euro:")
+            st.badge(offer["statut"], color="blue", icon=":material/flag:")
+    with actions:
+        if offer["lien"]:
+            st.link_button("Postuler", offer["lien"], type="primary", icon=":material/open_in_new:", width="stretch")
+        google = raw.get("job_google_link")
+        if google and google != offer["lien"]:
+            st.link_button("Voir sur Google Jobs", google, icon=":material/search:", width="stretch")
+    if offer["lien"]:
+        st.caption(f"Lien de l'offre : {offer['lien']}")
+    if bd.get("eliminated"):
+        st.error("Éliminée : " + "; ".join(bd["reasons"]) + f" · score avant élimination : {bd.get('raw_score', 0):.0f}/100")
+    if offer["résumé"]:
+        st.write(offer["résumé"])
+
 left, right = st.columns([3, 2])
 with left:
-    if extraction.get("summary_fr"):
-        st.write(extraction["summary_fr"])
-    facts = [f"📍 {offer['ville'] or '?'}, {offer['pays'] or '?'} ({offer['mode']})",
-             f"⏱️ {offer['durée'] or 'durée ?'}",
-             f"📅 début {offer['début']:%d/%m/%Y}" if offer["début"] else "📅 début ?",
-             f"💶 {offer['gratification']:.0f} €/mois" if offer["gratification"] else "💶 gratification ?"]
-    st.write(" · ".join(facts))
-    if score:
-        bd = score["breakdown"]
-        if bd["eliminated"]:
-            st.error("Éliminée : " + "; ".join(bd["reasons"]))
-        st.markdown(f"**Score : {score['score']:.0f}/100**"
-                    + (f" (avant élimination : {bd.get('raw_score', 0):.0f}/100)" if bd["eliminated"] else ""))
-        comp = pd.DataFrame([{"critère": k, "points": f"{v['points']:g} / {v['max']:g}", "détail": v["detail"]}
-                             for k, v in bd["components"].items()])
-        st.dataframe(comp, hide_index=True, width="stretch")
-        c1, c2 = st.columns(2)
-        c1.markdown("**Compétences que tu as** \n" + (", ".join(bd["skills_matched"]) or "—"))
-        c2.markdown("**Compétences manquantes** \n" + (", ".join(bd["skills_missing"]) or "—"))
-    langs = extraction.get("languages") or []
-    if langs:
-        st.caption("Langues : " + ", ".join(f"{l['lang']} ({l['level'] or 'niveau non précisé'})" for l in langs))
+    with st.container(border=True):
+        st.markdown("**Critères relevés dans l'annonce**")
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            ui.field("Lieu", ", ".join(x for x in [offer["ville"], offer["pays"]] if x))
+            ui.field("Mode de travail", offer["mode"] if offer["mode"] != "?" else "")
+            ui.field("Type de contrat", offer["contrat"])
+            ui.field("Convention de stage", offer["convention"])
+        with c2:
+            ui.field("Durée", offer["durée"])
+            ui.field("Début", (f"{offer['début']:%d/%m/%Y}" if offer["début"] else "")
+                     + (f" ({offer['début_texte']})" if offer["début_texte"] else ""))
+            ui.field("Gratification", f"{offer['gratification']:.0f} €/mois" if offer["gratification"] else "")
+            ui.field("Niveau d'études", offer["niveau"])
+        with c3:
+            ui.field("Domaine", offer["domaine"])
+            ui.field("Langues", offer["langues"])
+            ui.field("Source", offer["source"])
+            ui.field("Publiée le", offer["publiée"])
+
+    with st.container(border=True):
+        st.markdown("**Compétences**")
+        matched = {s.lower() for s in bd.get("skills_matched", [])}
+        required = extraction.get("required_skills") or []
+        nice = extraction.get("nice_to_have_skills") or []
+        if required:
+            st.caption("Exigées : vert = tu l'as, rouge = à travailler")
+            with st.container(horizontal=True):
+                for skill in required:
+                    ok = skill.lower() in matched
+                    st.badge(skill, color="green" if ok else "red", icon=":material/check:" if ok else ":material/close:")
+        if nice:
+            st.caption("Atouts appréciés")
+            with st.container(horizontal=True):
+                for skill in nice:
+                    st.badge(skill, color="green" if skill.lower() in matched else "gray")
+        if not (required or nice):
+            st.caption("Aucune compétence listée dans l'annonce.")
+
     with st.expander("Annonce complète"):
-        st.text((db.get_job(conn, job_id) or {}).get("job_description") or "")
+        st.text(job.get("job_description") or "")
+
 with right:
-    if offer["lien"]:
-        st.link_button("Postuler", offer["lien"], type="primary", width="stretch")
-    st.caption(f"Source : {offer['source'] or '?'} · publiée le {offer['publiée'] or '?'}")
-    app = db.get_application(conn, job_id)
-    with st.form(f"app_{job_id}"):
-        status = st.selectbox("Statut", db.STATUSES, index=db.STATUSES.index(app["status"]))
-        notes = st.text_area("Notes", app["notes"], height=150)
-        if st.form_submit_button("Enregistrer"):
-            db.set_application(conn, job_id, status, notes)
-            st.toast("Enregistré.")
-            st.rerun()
+    if bd.get("components"):
+        with st.container(border=True):
+            st.markdown("**Détail du score**")
+            labels = {"location": "Lieu", "duration": "Durée", "start_date": "Date de début", "skills": "Compétences",
+                      "languages": "Langues", "domain": "Domaine", "stipend": "Gratification"}
+            for key, comp in bd["components"].items():
+                st.progress(comp["ratio"], text=f"{labels.get(key, key)} · {comp['points']:g}/{comp['max']:g}")
+                st.caption(comp["detail"])
+
+    with st.container(border=True):
+        st.markdown("**Suivi de candidature**")
+        app = db.get_application(conn, job_id)
+        with st.form(f"app_{job_id}", border=False):
+            status = st.selectbox("Statut", db.STATUSES, index=db.STATUSES.index(app["status"]))
+            notes = st.text_area("Notes", app["notes"], height=120, placeholder="Contact, date de relance…")
+            if st.form_submit_button("Enregistrer", type="primary"):
+                db.set_application(conn, job_id, status, notes)
+                st.toast("Enregistré.")
+                st.rerun()

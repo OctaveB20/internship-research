@@ -4,9 +4,9 @@ from streamlit.testing.v1 import AppTest
 
 from src.config import ROOT
 
-PAGES = [str(ROOT / p) for p in ("app.py", "pages/1_Recherche.py", "pages/2_Offres.py", "pages/3_Chat.py",
+PAGES = [str(ROOT / p) for p in ("app.py", "pages/0_Accueil.py", "pages/1_Recherche.py", "pages/2_Offres.py", "pages/3_Chat.py",
                                  "pages/4_Candidatures.py")]
-RECHERCHE, OFFRES = PAGES[1], PAGES[2]
+RECHERCHE, OFFRES = PAGES[2], PAGES[3]
 
 
 @pytest.fixture
@@ -83,11 +83,11 @@ def test_bad_database_url_is_readable(env, monkeypatch):
 def test_search_criteria_ui(env):
     at = AppTest.from_file(RECHERCHE, default_timeout=30).run()
     checked = lambda prefix: [c.label for c in at.checkbox if c.key.startswith(prefix) and c.value]  # noqa: E731
-    assert checked("c_") == ["Allemagne", "France"] and checked("d_") == ["5 mois", "6 mois"]
-    assert checked("m_") == ["janv. 2027", "févr. 2027", "mars 2027"]
+    assert set(checked("c_")) == {"Allemagne", "France"} and set(checked("d_")) == {"5 mois", "6 mois"}
+    assert set(checked("m_")) == {"janv. 2027", "févr. 2027", "mars 2027"}
     button(at, "Toute l'Europe").click().run()
     assert len(checked("c_")) == 30
-    assert at.metric[2].value.startswith("90 requête(s)")  # 3 intitulés × 30 pays
+    assert at.metric[2].value == "90"  # 3 intitulés × 30 pays
     button(at, "Aucun").click().run()
     assert any("coche au moins un pays" in w.value for w in at.warning)
     assert button(at, "Lancer la recherche").disabled
