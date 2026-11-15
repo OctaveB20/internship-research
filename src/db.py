@@ -62,6 +62,10 @@ CREATE TABLE IF NOT EXISTS api_cache (
     payload TEXT NOT NULL,
     created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS api_usage (
     month TEXT PRIMARY KEY,
     count INTEGER NOT NULL DEFAULT 0
@@ -382,6 +386,19 @@ def save_cached_response(conn: Database, key: str, payload: dict[str, Any]) -> N
         "ON CONFLICT(cache_key) DO UPDATE SET payload = excluded.payload, created_at = excluded.created_at",
         (key, json.dumps(payload, ensure_ascii=False), now_iso()),
     )
+    conn.commit()
+
+
+# ---------- settings ----------
+def get_setting(conn: Database, key: str) -> str | None:
+    """Valeur enregistrée (texte), ou None."""
+    row = conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+    return row[0] if row else None
+
+
+def set_setting(conn: Database, key: str, value: str) -> None:
+    conn.execute("INSERT INTO settings (key, value) VALUES (?, ?) "
+                 "ON CONFLICT(key) DO UPDATE SET value = excluded.value", (key, value))
     conn.commit()
 
 

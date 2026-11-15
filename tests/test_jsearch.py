@@ -6,6 +6,7 @@ import pytest
 import requests
 
 from src import config, db, jsearch
+from tests.conftest import DEV_QUERIES
 
 FIXTURE_FR = config.FIXTURES_DIR / "search_fr_controle_gestion.json"
 FAKE_KEY = "cle-de-test-secrete"
@@ -86,7 +87,7 @@ def test_dev_mode_reads_fixtures_by_country_without_network(conn, cfg, tmp_path,
     assert fr.source == de.source == "fixture"
     assert len(fr.jobs) == len(de.jobs) == 10
     assert fr.jobs[0]["job_id"] != de.jobs[0]["job_id"]
-    assert len(jsearch.search_jobs(conn, "x", "es", cfg, dev=True).jobs) == 20  # pays inconnu : tout
+    assert jsearch.search_jobs(conn, "x", "es", cfg, dev=True).jobs == []  # pays sans fixture : rien
     assert db.get_api_usage(conn) == 0
 
 
@@ -96,7 +97,7 @@ def test_dev_mode_follows_env(conn, cfg, monkeypatch, no_network):
 
 
 def test_collect_dev_mode_upserts_and_dedupes_runs(conn, cfg, no_network):
-    queries = config.load_config().queries  # 2 requêtes fr + 1 de
+    queries = DEV_QUERIES  # 2 requêtes fr + 1 de
     s1 = jsearch.collect(conn, queries, cfg, dev=True)
     assert (s1.fetched, s1.new, s1.api_calls, s1.errors) == (30, 20, 0, [])
     s2 = jsearch.collect(conn, queries, cfg, dev=True)

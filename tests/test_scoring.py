@@ -3,6 +3,7 @@ from datetime import date
 
 import pytest
 
+from tests.conftest import DEV_QUERIES
 from src import config, db, extract, jsearch, scoring
 from src.extract import JobExtraction
 
@@ -107,7 +108,7 @@ def test_stipend_component_when_weighted():
 
 def test_fixture_pipeline_eliminates_expected_offers(conn):
     cfg = config.load_config()
-    jsearch.collect(conn, cfg.queries, cfg, dev=True)
+    jsearch.collect(conn, DEV_QUERIES, cfg, dev=True)
     extract.extract_new_jobs(conn, cfg, dev=True)
     assert scoring.score_all(conn, config.load_profile()) == 20
     rows = db.list_jobs_overview(conn)

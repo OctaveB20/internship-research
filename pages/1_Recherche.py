@@ -1,40 +1,132 @@
-"""Recherche : collecte JSearch → extraction IA → scoring."""
+"""Recherche : critères (intitulés, pays, mois de début, durées…) → collecte JSearch → extraction IA → scoring."""
 import json
+from datetime import date
 
 import pandas as pd
 import streamlit as st
 
-from src import config, extract, jsearch, llm, scoring, ui
+from src import config, criteria as crit, extract, jsearch, llm, scoring, ui
 
-conn, cfg, profile = ui.setup_page("Recherche", "🔎")
+conn, cfg, _ = ui.setup_page("Recherche", "🔎")
+base_profile = config.load_profile()
+saved = crit.load(conn, base_profile, cfg)
+months = crit.upcoming_months(date.today(), 15)
 
-# ---------- Quota ----------
+# État des cases : repris des critères enregistrés quand il manque (1re visite ou retour sur la page,
+# Streamlit oubliant l'état des cases d'une page quittée).
+defaults = {"crit_titles": ", ".join(saved.titles), "crit_cities": ", ".join(saved.cities),
+            "crit_remote": saved.remote_ok, "crit_posted": saved.date_posted, "crit_pages": saved.pages,
+            "crit_stipend": int(saved.min_stipend_eur or 0), "crit_exclude": ", ".join(saved.exclude_words)}
+defaults |= {f"c_{n}": n in saved.countries for n in crit.EUROPE}
+defaults |= {f"m_{ym}": ym in saved.start_months for ym in months}
+defaults |= {f"d_{d}": d in saved.durations for d in crit.DURATIONS}
+for key, value in defaults.items():
+    st.session_state.setdefault(key, value)
+
+
+def set_all(prefix: str, keys, value: bool) -> None:
+    for k in keys:
+        st.session_state[f"{prefix}{k}"] = value
+
+
+# ---------- Intitulé ----------
+st.text_input("Intitulé(s) recherché(s)", key="crit_titles",
+              placeholder="stage contrôle de gestion, Praktikum Controlling, finance intern",
+              help="Plusieurs intitulés : sépare-les par des virgules. Astuce : ajoute l'intitulé dans la langue "
+                   "du pays (Praktikum… pour l'Allemagne, stage… pour la France).")
+
+# ---------- Pays ----------
+st.markdown("**Pays**")
+b1, b2, b3, _ = st.columns([1, 1, 1, 4])
+b1.button("Toute l'Europe", on_click=set_all, args=("c_", crit.EUROPE, True))
+b2.button("Aucun", on_click=set_all, args=("c_", crit.EUROPE, False))
+b3.button("France + Allemagne", on_click=lambda: (set_all("c_", crit.EUROPE, False),
+                                                  set_all("c_", ["France", "Germany"], True)))
+cols = st.columns(6)
+for i, (name, (code, label)) in enumerate(sorted(crit.EUROPE.items(), key=lambda kv: kv[1][1])):
+    cols[i % 6].checkbox(label, key=f"c_{name}")
+
+# ---------- Mois de début et durée ----------
+left, right = st.columns([3, 2])
+with left:
+    st.markdown("**Mois de début**")
+    m1, m2, _ = st.columns([1, 1, 3])
+    m1.button("Tous les mois", on_click=set_all, args=("m_", months, True))
+    m2.button("Aucun mois", on_click=set_all, args=("m_", months, False), help="Aucun = pas de contrainte")
+    mcols = st.columns(5)
+    for i, ym in enumerate(months):
+        mcols[i % 5].checkbox(crit.month_label(ym), key=f"m_{ym}")
+with right:
+    st.markdown("**Durée du stage**")
+    dcols = st.columns(4)
+    for i, d in enumerate(crit.DURATIONS):
+        dcols[i % 4].checkbox(f"{d} mois", key=f"d_{d}")
+    st.caption("Aucune case = toutes durées.")
+
+# ---------- Autres critères ----------
+with st.expander("Autres critères", expanded=False):
+    o1, o2, o3 = st.columns(3)
+    o1.text_input("Villes préférées (bonus)", key="crit_cities", placeholder="Paris, Munich",
+                  help="Une offre dans ces villes gagne des points, les autres ne sont pas éliminées.")
+    o1.checkbox("J'accepte le full remote", key="crit_remote")
+    o2.selectbox("Offres publiées depuis", list(crit.DATE_POSTED), format_func=crit.DATE_POSTED.get, key="crit_posted")
+    o2.select_slider("Pages de résultats par requête", [1, 2, 3], key="crit_pages",
+                     help="1 page ≈ 10 offres = 1 requête JSearch. 2 pages = 2 fois plus d'offres et de requêtes.")
+    o3.number_input("Gratification minimale (€/mois, 0 = indifférent)", 0, 5000, step=100, key="crit_stipend",
+                    help="Les offres sous ce montant perdent des points (pas éliminées : souvent non indiqué).")
+    o3.text_input("Mots à exclure du titre", key="crit_exclude", placeholder="alternance, CDI, Werkstudent",
+                  help="Une offre dont le titre contient un de ces mots est éliminée.")
+
+# ---------- Lecture du formulaire ----------
+ss = st.session_state
+form = dict(
+    titles=crit.split_list(ss.crit_titles), countries=[n for n in crit.EUROPE if ss[f"c_{n}"]],
+    start_months=[ym for ym in months if ss[f"m_{ym}"]], durations=[d for d in crit.DURATIONS if ss[f"d_{d}"]],
+    cities=crit.split_list(ss.crit_cities), remote_ok=ss.crit_remote, date_posted=ss.crit_posted,
+    pages=ss.crit_pages, min_stipend_eur=ss.crit_stipend or None, exclude_words=crit.split_list(ss.crit_exclude),
+)
+problems = [msg for ok, msg in [(form["titles"], "écris au moins un intitulé"),
+                                (form["countries"], "coche au moins un pays")] if not ok]
+current = None if problems else crit.SearchCriteria(**form)
+
+# ---------- Quota et lancement ----------
+st.divider()
 q = jsearch.quota_status(conn, cfg.quota_soft_limit)
-c1, c2, c3 = st.columns(3)
+n_req = 0 if (current is None or config.dev_mode()) else current.request_count()
+c1, c2, c3, c4 = st.columns(4)
 c1.metric("Requêtes JSearch ce mois", f"{q['used']} / {q['plan_limit']}")
-c2.metric("Plafond de l'app", q["soft_limit"], help="quota_soft_limit dans config.yaml")
-c3.metric("Encore possibles", q["remaining"])
+c2.metric("Encore possibles", q["remaining"], help=f"Plafond de l'app : {q['soft_limit']} (config.yaml)")
+real_req = current.request_count() if current else 0
+c3.metric("Cette recherche", f"{real_req} requête(s)" + (" (0 en mode dev)" if config.dev_mode() else ""),
+          help="Intitulés × pays × pages. 0 si déjà faite aujourd'hui (cache).")
+c4.metric("Après", max(0, q["remaining"] - n_req))
 st.progress(min(q["used"] / q["plan_limit"], 1.0))
+too_big = n_req > q["remaining"]
+if problems:
+    st.warning("Pour lancer : " + " et ".join(problems) + ".")
+elif too_big:
+    st.error(f"Cette recherche demande {n_req} requêtes, il en reste {q['remaining']} ce mois-ci : "
+             "décoche des pays ou des intitulés.")
+elif current:
+    st.caption(f"{len(current.titles)} intitulé(s) × {len(current.countries)} pays × {current.pages} page(s) · "
+               + crit.describe(current))
 
-# ---------- Requêtes ----------
-labels = {f"{x.query} ({x.country})": x for x in cfg.queries}
-chosen = st.multiselect("Requêtes", list(labels), default=list(labels))
-with st.expander("Ajouter une requête ponctuelle"):
-    col1, col2 = st.columns([3, 1])
-    extra_query = col1.text_input("Requête", placeholder="stage contrôle de gestion Lyon")
-    extra_country = col2.text_input("Pays (code)", "fr", max_chars=2)
-queries = [labels[c] for c in chosen]
-if extra_query.strip():
-    queries.append(config.SearchQuery(query=extra_query.strip(), country=extra_country.strip() or "fr"))
+a1, a2 = st.columns([1, 3])
+save_only = a1.button("Enregistrer les critères", disabled=current is None,
+                      help="Enregistre et recalcule les scores des offres déjà en base. Gratuit, aucun appel.")
+launch = a2.button("Lancer la recherche", type="primary", disabled=current is None or too_big)
 
-cost = 0 if config.dev_mode() else len(queries)
-st.caption(f"Coût max : {cost} requête(s) JSearch (0 si déjà faites aujourd'hui : cache).")
-launch = st.button("Lancer", type="primary", disabled=not queries)
+if (save_only or launch) and current:
+    crit.save(conn, current)
+    profile = crit.apply_to_profile(base_profile, current)
+    if save_only:
+        st.toast(f"Critères enregistrés, {scoring.score_all(conn, profile)} offre(s) rescorée(s).")
 
-if launch:
-    with st.status("Collecte en cours…", expanded=True) as status:
+if launch and current:
+    run_cfg = cfg.model_copy(update={"date_posted": current.date_posted})
+    with st.status("Recherche en cours…", expanded=True) as status:
         status.write("1/3 · Collecte des offres")
-        col = jsearch.collect(conn, queries, cfg)
+        col = jsearch.collect(conn, crit.build_queries(current), run_cfg)
         for err in col.errors:
             st.error(err)
         status.write(f"{col.fetched} offres reçues, {col.new} nouvelles "
@@ -62,9 +154,6 @@ if launch:
     st.caption("Résultats dans la page **Offres** (menu de gauche).")
 
 st.divider()
-if st.button("Recalculer les scores", help="Après modification de profile.yaml. Gratuit, aucun appel."):
-    st.toast(f"{scoring.score_all(conn, profile)} offre(s) rescorée(s).")
-
 # ---------- Test réel de l'IA ----------
 TEST_CACHE = config.CACHE_DIR / "llm_test.json"
 with st.expander("Tester l'extraction IA sur 3 offres des fixtures (vrai appel)"):

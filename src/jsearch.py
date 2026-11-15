@@ -114,11 +114,11 @@ def parse_response(payload: dict[str, Any]) -> list[dict[str, Any]]:
 
 # ---------- Mode dev ----------
 def load_fixtures(country: str | None = None, fixtures_dir: Path = config.FIXTURES_DIR) -> list[dict[str, Any]]:
-    """Offres des fixtures dont parameters.country correspond (toutes si aucune ne correspond)."""
+    """Offres des fixtures dont parameters.country correspond (toutes si pays non précisé).
+    Un pays sans fixture ne renvoie rien, comme une vraie recherche sans résultat."""
     payloads = [_read_json(p) for p in sorted(fixtures_dir.glob("*.json"))]
     if country:
-        matching = [p for p in payloads if str(p.get("parameters", {}).get("country", "")).lower() == country.lower()]
-        payloads = matching or payloads
+        payloads = [p for p in payloads if str(p.get("parameters", {}).get("country", "")).lower() == country.lower()]
     return [job for p in payloads for job in parse_response(p)]
 
 
@@ -196,12 +196,12 @@ def collect(conn: db.Database, queries: list[config.SearchQuery], cfg: config.Ap
     summary = CollectSummary()
     for q in queries:
         try:
-            res = search_jobs(conn, q.query, q.country, cfg, **kwargs)
+            res = search_jobs(conn, q.query, q.country, cfg, q.page, **kwargs)
         except QuotaExceeded as e:
             summary.errors.append(str(e))
             break
         except JSearchError as e:
-            summary.errors.append(f"« {q.query} » : {e}")
+            summary.errors.append(f"« {q.query} » ({q.country.upper()}) : {e}")
             continue
         summary.api_calls += res.source == "api"
         summary.cache_hits += res.source == "cache"

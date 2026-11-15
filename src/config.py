@@ -95,6 +95,7 @@ def db_path() -> Path:
 class SearchQuery(BaseModel):
     query: str
     country: str = "fr"
+    page: int = Field(1, ge=1)
 
 
 LLM_KEYS = {"gemini": "GEMINI_API_KEY", "groq": "GROQ_API_KEY", "anthropic": "ANTHROPIC_API_KEY"}
@@ -110,7 +111,8 @@ class AppConfig(BaseModel):
     date_posted: Literal["all", "today", "3days", "week", "month"] = "week"
     employment_types: str = "INTERN"
     request_timeout_s: float = 30
-    queries: list[SearchQuery] = []
+    default_titles: list[str] = ["stage contrôle de gestion", "stage FP&A", "finance intern"]
+    queries: list[SearchQuery] = []  # facultatif : la page Recherche utilise ses propres critères
 
 
 # ---------- profile.yaml ----------
@@ -147,6 +149,8 @@ class Profile(BaseModel):
     languages: dict[str, str] = {}
     min_stipend_eur: float | None = None
     weights: Weights = Weights()
+    exclude_title_words: list[str] = []  # offre éliminée si son titre contient un de ces mots
+    start_months: list[str] = []  # "AAAA-MM" cochés dans la page Recherche (vide = toute la plage)
 
     @model_validator(mode="after")
     def _check_dates(self) -> "Profile":

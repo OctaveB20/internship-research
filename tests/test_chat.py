@@ -1,6 +1,7 @@
 """Tests de src/chat.py : outils SQL paramétrés + boucle avec faux client."""
 import pytest
 
+from tests.conftest import DEV_QUERIES
 from src import chat, config, db, extract, jsearch, scoring
 from tests.fakes import FakeLLM
 
@@ -8,7 +9,7 @@ from tests.fakes import FakeLLM
 @pytest.fixture
 def full(conn):
     cfg = config.load_config()
-    jsearch.collect(conn, cfg.queries, cfg, dev=True)
+    jsearch.collect(conn, DEV_QUERIES, cfg, dev=True)
     extract.extract_new_jobs(conn, cfg, dev=True)
     scoring.score_all(conn, config.load_profile())
     return conn

@@ -11,10 +11,10 @@ def test_project_yaml_files_are_valid():
     cfg = config.load_config()
     assert cfg.llm_provider == "gemini" and cfg.model == "gemini-2.5-flash"
     assert cfg.quota_soft_limit == 180
-    assert len(cfg.queries) == 3
+    assert len(cfg.default_titles) == 3
     prof = config.load_profile()
     assert prof.available_from == date(2027, 1, 5)
-    assert prof.duration_months.min == 4
+    assert prof.duration_months.min == 5
 
 
 def test_profile_rejects_inverted_duration(tmp_path):

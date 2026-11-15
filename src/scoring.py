@@ -128,6 +128,11 @@ def elimination_reasons(ex: JobExtraction, job: dict[str, Any], p: config.Profil
         reasons.append(f"durée incompatible ({lo}–{hi} mois)" if lo != hi else f"durée incompatible ({lo} mois)")
     if ex.start_date_earliest and ex.start_date_earliest > p.latest_start:
         reasons.append(f"début trop tard ({ex.start_date_earliest:%d/%m/%Y})")
+    title = f" {normalize_text(job.get('job_title'))} "
+    for word in p.exclude_title_words:
+        if normalize_text(word) and f" {normalize_text(word)} " in title:
+            reasons.append(f"titre exclu (« {word} »)")
+            break
     return reasons
 
 
@@ -166,6 +171,8 @@ def score_start(ex: JobExtraction, p: config.Profile) -> tuple[float, str]:
     if start > p.latest_start:
         return 0.0, f"début le {start:%d/%m/%Y}, après ta date limite"
     if start >= p.available_from:
+        if p.start_months and f"{start:%Y-%m}" not in p.start_months:
+            return 0.6, f"début le {start:%d/%m/%Y} : mois non coché"
         return 1.0, f"début le {start:%d/%m/%Y} : compatible"
     days_early = (p.available_from - start).days
     return max(0.0, 1 - days_early / 60), f"début le {start:%d/%m/%Y}, {days_early} j avant ta disponibilité"

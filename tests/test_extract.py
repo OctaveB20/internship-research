@@ -4,7 +4,7 @@ from datetime import date
 import pytest
 
 from src import config, db, extract, jsearch, llm
-from tests.conftest import make_job
+from tests.conftest import DEV_QUERIES, make_job
 from tests.fakes import FakeLLM
 
 REF = extract.load_reference()
@@ -98,7 +98,7 @@ def test_missing_key_is_readable(conn, monkeypatch):
 
 def test_dev_mode_uses_reference_without_llm(conn):
     cfg = config.load_config()
-    jsearch.collect(conn, cfg.queries, cfg, dev=True)
+    jsearch.collect(conn, DEV_QUERIES, cfg, dev=True)
     client = FakeLLM()
     s = extract.extract_new_jobs(conn, cfg, client=client, dev=True)
     assert s.from_reference == 20 and client.calls == 0

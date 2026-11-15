@@ -7,10 +7,10 @@ import os
 
 import pytest
 
-from src import db
+from src import config, db
 
 TEST_PG_URL = os.getenv("TEST_DATABASE_URL", "")
-TABLES = "applications, scores, extractions, api_usage, api_cache, jobs"
+TABLES = "applications, scores, extractions, api_usage, api_cache, settings, jobs"
 
 
 def reset_postgres(url: str) -> None:
@@ -57,3 +57,11 @@ def make_job(job_id: str = "j1", **overrides) -> dict:
     }
     job.update(overrides)
     return job
+
+
+# Requêtes de test : 2 en France + 1 en Allemagne (= les 2 fixtures, 20 offres distinctes).
+DEV_QUERIES = [
+    config.SearchQuery(query="stage contrôle de gestion", country="fr"),
+    config.SearchQuery(query="stage FP&A", country="fr"),
+    config.SearchQuery(query="finance intern", country="de"),
+]

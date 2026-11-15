@@ -17,6 +17,14 @@ def env(tmp_path, monkeypatch):
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
 
 
+def button(at, label):
+    return next(b for b in at.button if b.label == label)
+
+
+def launch(at):
+    button(at, "Lancer la recherche").click().run()
+
+
 @pytest.mark.parametrize("page", PAGES)
 def test_pages_render_on_empty_db(env, page):
     assert not AppTest.from_file(page, default_timeout=30).run().exception
@@ -24,7 +32,7 @@ def test_pages_render_on_empty_db(env, page):
 
 def test_full_dev_pipeline_from_ui(env):
     at = AppTest.from_file(RECHERCHE, default_timeout=30).run()
-    at.button[0].click().run()
+    launch(at)
     assert not at.exception
     assert "20 nouvelle(s) offre(s)" in at.success[0].value
     for page in PAGES:
@@ -53,7 +61,7 @@ def test_pipeline_on_postgres(env, monkeypatch):
     monkeypatch.setenv("DATABASE_URL", TEST_PG_URL)
     at = AppTest.from_file(RECHERCHE, default_timeout=30).run()
     assert any("Postgres" in c.value for c in at.sidebar.caption)
-    at.button[0].click().run()
+    launch(at)
     assert not at.exception and "20 nouvelle(s) offre(s)" in at.success[0].value
     for page in PAGES:
         assert not AppTest.from_file(page, default_timeout=30).run().exception
@@ -70,3 +78,32 @@ def test_bad_database_url_is_readable(env, monkeypatch):
     assert not at.exception
     assert "Connexion à la base Postgres impossible" in at.error[0].value and "monmdp" not in at.error[0].value
     ui._shared_postgres.clear()
+
+
+def test_search_criteria_ui(env):
+    at = AppTest.from_file(RECHERCHE, default_timeout=30).run()
+    checked = lambda prefix: [c.label for c in at.checkbox if c.key.startswith(prefix) and c.value]  # noqa: E731
+    assert checked("c_") == ["Allemagne", "France"] and checked("d_") == ["5 mois", "6 mois"]
+    assert checked("m_") == ["janv. 2027", "févr. 2027", "mars 2027"]
+    button(at, "Toute l'Europe").click().run()
+    assert len(checked("c_")) == 30
+    assert at.metric[2].value.startswith("90 requête(s)")  # 3 intitulés × 30 pays
+    button(at, "Aucun").click().run()
+    assert any("coche au moins un pays" in w.value for w in at.warning)
+    assert button(at, "Lancer la recherche").disabled
+    button(at, "France + Allemagne").click().run()
+    at.text_input(key="crit_titles").input("stage FP&A").run()
+    at.checkbox(key="d_4").check().run()
+    button(at, "Enregistrer les critères").click().run()
+    again = AppTest.from_file(RECHERCHE, default_timeout=30).run()  # nouvelle session : critères relus en base
+    assert again.text_input(key="crit_titles").value == "stage FP&A"
+    assert again.checkbox(key="d_4").value is True
+
+
+def test_quota_blocks_too_big_search(env, monkeypatch):
+    monkeypatch.setenv("DEV_MODE", "0")
+    at = AppTest.from_file(RECHERCHE, default_timeout=30).run()
+    button(at, "Toute l'Europe").click().run()
+    at.select_slider(key="crit_pages").set_value(3).run()  # 3 × 30 × 3 = 270 > 180
+    assert any("décoche des pays" in e.value for e in at.error)
+    assert button(at, "Lancer la recherche").disabled

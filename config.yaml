@@ -10,8 +10,6 @@ price_input_per_mtok: 0
 price_output_per_mtok: 0
 
 quota_soft_limit: 180
+# Valeurs pré-remplies la première fois dans la page Recherche (ensuite, ce sont les critères enregistrés).
 date_posted: week
-queries:
-  - {query: "stage contrôle de gestion Paris", country: fr}
-  - {query: "stage FP&A Paris", country: fr}
-  - {query: "finance intern Munich", country: de}
+default_titles: ["stage contrôle de gestion", "stage FP&A", "finance intern"]

@@ -4,12 +4,13 @@ from datetime import date
 
 from openpyxl import load_workbook
 
+from tests.conftest import DEV_QUERIES
 from src import config, db, export, extract, jsearch, offers, scoring
 
 
 def loaded(conn):
     cfg = config.load_config()
-    jsearch.collect(conn, cfg.queries, cfg, dev=True)
+    jsearch.collect(conn, DEV_QUERIES, cfg, dev=True)
     extract.extract_new_jobs(conn, cfg, dev=True)
     scoring.score_all(conn, config.load_profile())
     return offers.load_offers(conn)

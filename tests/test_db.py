@@ -10,7 +10,7 @@ from tests.conftest import make_job
 def test_init_db_creates_tables_and_is_idempotent(conn):
     db.init_db(conn)  # 2e appel sans erreur
     tables = db.list_tables(conn)
-    assert {"jobs", "extractions", "scores", "applications", "api_usage", "api_cache"} <= tables
+    assert {"jobs", "extractions", "scores", "applications", "api_usage", "api_cache", "settings"} <= tables
 
 
 def test_upsert_new_then_existing_keeps_first_seen(conn):

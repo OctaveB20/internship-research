@@ -2,7 +2,7 @@
 target_countries: [France, Germany]
 target_cities: [Paris]          # bonus si match, pas éliminatoire
 remote_ok: true
-duration_months: {min: 4, max: 6}
+duration_months: {min: 5, max: 6}
 available_from: 2027-01-05
 latest_start: 2027-03-31
 domains: [contrôle de gestion, FP&A, finance d'entreprise]
