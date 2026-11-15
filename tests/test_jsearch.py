@@ -122,9 +122,9 @@ def test_parse_response_error_status():
 
 
 def test_build_params():
-    p = jsearch.build_params("finance intern Munich", "DE", page=2)
-    assert p == {"query": "finance intern Munich", "page": "2", "num_pages": "1", "country": "de",
-                 "date_posted": "week", "employment_types": "INTERN"}
+    p = jsearch.build_params("finance intern Munich", "DE")
+    assert p == {"query": "finance intern Munich", "country": "de", "date_posted": "week", "employment_types": "INTERN"}
+    assert jsearch.build_params("x", "fr", cursor="CUR2")["cursor"] == "CUR2"
 
 
 # ---------- Appel réel simulé + cache ----------
@@ -133,9 +133,9 @@ def test_api_call_counts_and_caches(conn, cfg, tmp_path, fake_get):
     assert res.source == "api" and len(res.jobs) == 10
     assert db.get_api_usage(conn) == 1
     call = fake_get.calls[0]
-    assert call["url"] == "https://jsearch.p.rapidapi.com/search"
+    assert call["url"] == "https://jsearch.p.rapidapi.com/search-v2"
     assert call["headers"] == {"X-RapidAPI-Key": FAKE_KEY, "X-RapidAPI-Host": "jsearch.p.rapidapi.com"}
-    assert call["params"]["employment_types"] == "INTERN" and call["params"]["num_pages"] == "1"
+    assert call["params"]["employment_types"] == "INTERN" and "page" not in call["params"]
     assert len(list((tmp_path / "cache").glob("*_2026-11-15.json"))) == 1
 
 
@@ -149,7 +149,7 @@ def test_same_query_same_day_uses_cache(conn, cfg, tmp_path, fake_get):
 def test_next_day_or_other_page_calls_again(conn, cfg, tmp_path, fake_get):
     search(conn, cfg, tmp_path)
     search(conn, cfg, tmp_path, today=date(2026, 11, 16))
-    search(conn, cfg, tmp_path, page=2)
+    search(conn, cfg, tmp_path, cursor="CUR2")
     assert len(fake_get.calls) == 3 and db.get_api_usage(conn) == 3
 
 
@@ -225,3 +225,45 @@ def test_postgres_keeps_cache_when_disk_is_wiped(conn, cfg, tmp_path, fake_get):
         f.unlink()  # redémarrage de Streamlit Cloud
     assert search(conn, cfg, tmp_path).source == "cache"
     assert len(fake_get.calls) == 1 and db.get_api_usage(conn) == 1
+
+
+# ---------- Format search-v2 ----------
+def v2_payload(jobs, cursor):
+    return {"status": "OK", "request_id": "r", "data": {"jobs": jobs, "cursor": cursor}}
+
+
+def test_parse_v2_payload_and_renamed_fields():
+    jobs, cursor = jsearch.parse_page(v2_payload(
+        [{"job_id": "a", "job_title": "Intern", "apply_url": "https://x/apply", "work_arrangement": "remote"},
+         {"job_title": "sans id"}], "CUR2"))
+    assert cursor == "CUR2" and len(jobs) == 1
+    assert jobs[0]["job_apply_link"] == "https://x/apply" and jobs[0]["job_is_remote"] is True
+    assert jsearch.parse_page(v2_payload([], None)) == ([], None)
+
+
+def test_apply_link_fallbacks():
+    job = jsearch.normalize_job({"job_id": "a", "apply_options": [{"apply_link": "https://opt"}]})
+    assert job["job_apply_link"] == "https://opt"
+
+
+def test_collect_follows_cursor_between_pages(conn, cfg, tmp_path, fake_get):
+    pages = [FakeResponse(200, v2_payload([{"job_id": f"p1-{i}"} for i in range(10)], "CUR2")),
+             FakeResponse(200, v2_payload([{"job_id": f"p2-{i}"} for i in range(3)], None))]
+    fake_get.response = None
+
+    def respond(url, headers=None, params=None, timeout=None):
+        fake_get.calls.append({"params": params})
+        return pages.pop(0)
+    jsearch.requests.get = respond
+    queries = [config.SearchQuery(query="x", country="be", page=p) for p in (1, 2, 3)]
+    s = jsearch.collect(conn, queries, cfg, dev=False, today=DAY, cache_dir=tmp_path)
+    assert s.fetched == 13 and s.api_calls == 2  # pas de 3e appel : la page 2 n'a pas de curseur
+    assert "cursor" not in fake_get.calls[0]["params"] and fake_get.calls[1]["params"]["cursor"] == "CUR2"
+
+
+def test_http_error_shows_api_message_and_counts_call(conn, cfg, tmp_path, fake_get):
+    fake_get.response = FakeResponse(404, {"message": "Endpoint '/search' does not exist"})
+    s = jsearch.collect(conn, [config.SearchQuery(query="x", country="be")], cfg, dev=False, today=DAY,
+                        cache_dir=tmp_path)
+    assert "HTTP 404 : Endpoint '/search' does not exist" in s.errors[0]
+    assert s.api_calls == 1

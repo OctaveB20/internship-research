@@ -3,7 +3,7 @@
 #   groq      : gratuit (clé GROQ_API_KEY), ex. model: llama-3.3-70b-versatile
 #   anthropic : payant (clé ANTHROPIC_API_KEY), ex. model: claude-haiku-5-5
 llm_provider: gemini
-model: gemini-3.5-flash   # si erreur 404 « modèle introuvable » : gemini-3.5-flash
+model: gemini-3.5-flash
 # Prix en $ par million de tokens, pour le coût estimé (0 = offre gratuite).
 # Claude Haiku 5.5 : 0.10 en entrée, 0.50 en sortie.
 price_input_per_mtok: 0

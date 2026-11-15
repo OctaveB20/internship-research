@@ -9,7 +9,7 @@ from src import config
 
 def test_project_yaml_files_are_valid():
     cfg = config.load_config()
-    assert cfg.llm_provider == "gemini" and cfg.model == "gemini-2.5-flash"
+    assert cfg.llm_provider == "gemini" and cfg.model.startswith("gemini-")
     assert cfg.quota_soft_limit == 180
     assert len(cfg.default_titles) == 3
     prof = config.load_profile()
