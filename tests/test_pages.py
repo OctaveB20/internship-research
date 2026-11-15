@@ -52,7 +52,7 @@ def test_pipeline_on_postgres(env, monkeypatch):
     ui._shared_postgres.clear()
     monkeypatch.setenv("DATABASE_URL", TEST_PG_URL)
     at = AppTest.from_file(RECHERCHE, default_timeout=30).run()
-    assert any("Supabase" in c.value for c in at.sidebar.caption)
+    assert any("Postgres" in c.value for c in at.sidebar.caption)
     at.button[0].click().run()
     assert not at.exception and "20 nouvelle(s) offre(s)" in at.success[0].value
     for page in PAGES:
@@ -68,5 +68,5 @@ def test_bad_database_url_is_readable(env, monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "postgresql://postgres.x:monmdp@127.0.0.1:1/postgres")
     at = AppTest.from_file(OFFRES, default_timeout=30).run()
     assert not at.exception
-    assert "Connexion à Supabase impossible" in at.error[0].value and "monmdp" not in at.error[0].value
+    assert "Connexion à la base Postgres impossible" in at.error[0].value and "monmdp" not in at.error[0].value
     ui._shared_postgres.clear()

@@ -48,6 +48,8 @@ def test_dev_mode_and_secrets(monkeypatch):
      "postgresql://postgres.abc:p%40ss%3Aw@aws-0.pooler.supabase.com:6543/postgres"),
     ("postgresql://postgres.abc:[YOUR-PASSWORD]@h:6543/postgres", "vrai#mdp",
      "postgresql://postgres.abc:vrai%23mdp@h:6543/postgres"),
+    ("postgresql://neondb_owner:abc123@ep-x-pooler.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+     "", "postgresql://neondb_owner:abc123@ep-x-pooler.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"),
     ("", "", ""),
 ])
 def test_normaliser_url(raw, password, expected):

@@ -12,12 +12,12 @@ Aucun scraping : uniquement des API.
    RAPIDAPI_KEY = "..."
    GEMINI_API_KEY = "..."
    APP_PASSWORD = "un mot de passe"
-   DATABASE_URL = "postgresql://postgres.xxxx:MOT_DE_PASSE@aws-0-eu-west-3.pooler.supabase.com:6543/postgres"
+   DATABASE_URL = "postgresql://neondb_owner:MOT_DE_PASSE@ep-xxxx-pooler.eu-central-1.aws.neon.tech/neondb?sslmode=require"
    DEV_MODE = "1"
    ```
 3. `DEV_MODE = "1"` : les offres viennent de `tests/fixtures/` (aucun appel JSearch). Passe à `"0"` pour les vraies offres.
 
-Sans `DATABASE_URL`, l'app utilise SQLite, qui est effacé à chaque redémarrage sur Streamlit Cloud. Avec Supabase,
+Sans `DATABASE_URL`, l'app utilise SQLite, qui est effacé à chaque redémarrage sur Streamlit Cloud. Avec une base Postgres (ex. Neon, gratuit),
 offres, statuts, notes, compteur de quota et cache JSearch sont conservés. Les tables sont créées automatiquement.
 
 ## Réglages

@@ -1,4 +1,4 @@
-"""Stockage : SQLite en local, Postgres (Supabase) si DATABASE_URL est défini. Requêtes simples, sans ORM.
+"""Stockage : SQLite en local, Postgres (Neon, Supabase…) si DATABASE_URL est défini. Requêtes simples, sans ORM.
 
 Les deux bases passent par la même classe `Database` : les requêtes s'écrivent avec des `?`
 (traduits en `%s` pour Postgres) et les rares différences de SQL (JSON, LIKE) passent par ses méthodes.
@@ -155,7 +155,7 @@ class Database:
 
     def describe(self) -> str:
         """Où sont les données (pour l'UI), sans jamais afficher d'identifiants."""
-        return "Supabase (Postgres)" if self.is_postgres else "SQLite local"
+        return "Postgres" if self.is_postgres else "SQLite local"
 
 
 def integrity_errors() -> tuple[type[Exception], ...]:
@@ -175,7 +175,7 @@ def connect(path: Path | str | None = None, url: str | None = None) -> Database:
     if url:
         import psycopg
         # autocommit : une requête = une transaction ; prepare_threshold=None : obligatoire avec le
-        # « Transaction pooler » de Supabase (port 6543), qui ne gère pas les requêtes préparées.
+        # connexions « poolées » (Neon, Supabase), qui ne gèrent pas les requêtes préparées.
         raw = psycopg.connect(url, autocommit=True, prepare_threshold=None, connect_timeout=10)
         return Database(raw, "postgres")
     path = Path(path) if path else config.db_path()

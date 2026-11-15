@@ -21,7 +21,7 @@ def reset_postgres(url: str) -> None:
 
 @pytest.fixture(autouse=True)
 def _no_database_url(monkeypatch):
-    """Les tests n'utilisent jamais une vraie base Supabase par accident."""
+    """Les tests n'utilisent jamais une vraie base Postgres par accident."""
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.delenv("DATABASE_PASSWORD", raising=False)
 

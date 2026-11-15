@@ -57,7 +57,7 @@ def on_streamlit_cloud() -> bool:
 
 
 def normaliser_url(url: str, mot_de_passe: str = "") -> str:
-    """Répare les erreurs de copie courantes dans l'adresse Supabase.
+    """Répare les erreurs de copie courantes dans l'adresse Postgres (Neon, Supabase…).
 
     - guillemets ou espaces en trop autour de l'adresse ;
     - crochets laissés autour du mot de passe ([MonMotDePasse]) ;
@@ -82,7 +82,7 @@ def normaliser_url(url: str, mot_de_passe: str = "") -> str:
 
 
 def database_url() -> str:
-    """Adresse Postgres (Supabase) ; vide = SQLite local. Ne jamais l'afficher : elle contient le mot de passe."""
+    """Adresse Postgres (Neon, Supabase…) ; vide = SQLite local. Ne jamais l'afficher : elle contient le mot de passe."""
     return normaliser_url(os.getenv("DATABASE_URL", ""), os.getenv("DATABASE_PASSWORD", "").strip())
 
 
