@@ -158,6 +158,9 @@ def list_jobs_overview(conn: sqlite3.Connection) -> list[dict[str, Any]]:
 # ---------- Dédoublonnage d'affichage ----------
 _GENDER_TAGS = re.compile(r"\(?\b(h|f|m|w|d|x)\s*/\s*(h|f|m|w|d|x)(\s*/\s*(h|f|m|w|d|x))?\b\)?")
 _LEGAL_SUFFIXES = re.compile(r"\b(sas|sasu|sa|sarl|se|gmbh|ag|kg|inc|ltd|llc|plc|group|groupe)\b")
+# Variantes d'un même mot dans les titres : « Stagiaire » = « Stage », « Praktikant » = « Praktikum »…
+_TITLE_SYNONYMS = {"stagiaire": "stage", "praktikant": "praktikum", "praktikantin": "praktikum",
+                   "internship": "intern", "trainee": "intern"}
 
 
 def normalize_text(text: str | None) -> str:
@@ -171,9 +174,10 @@ def normalize_text(text: str | None) -> str:
 def dedup_key(job: dict[str, Any]) -> tuple[str, str, str]:
     """Clé (entreprise, titre, ville) normalisée, insensible à « (H/F) », « GmbH »…"""
     employer = _LEGAL_SUFFIXES.sub(" ", normalize_text(job.get("employer_name")))
-    title = _GENDER_TAGS.sub(" ", normalize_text(job.get("job_title")))
+    title = _GENDER_TAGS.sub(" ", normalize_text(job.get("job_title"))).replace("/", " ")
+    title = " ".join(_TITLE_SYNONYMS.get(w, w) for w in title.split())
     city = normalize_text(job.get("job_city"))
-    return (" ".join(employer.split()), " ".join(title.replace("/", " ").split()), city)
+    return (" ".join(employer.split()), title, city)
 
 
 def dedupe_jobs(jobs: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
