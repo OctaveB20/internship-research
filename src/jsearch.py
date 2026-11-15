@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import sqlite3
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -146,14 +145,14 @@ def fetch_jobs_api(params: dict[str, str], api_key: str, timeout: float = 30) ->
         raise JSearchError("Réponse JSearch illisible (JSON invalide).") from None
 
 
-def quota_status(conn: sqlite3.Connection, soft_limit: int) -> dict[str, int]:
+def quota_status(conn: db.Database, soft_limit: int) -> dict[str, int]:
     """Compteur du mois : utilisé, plafond logiciel, plafond du plan gratuit, restant."""
     used = db.get_api_usage(conn)
     return {"used": used, "soft_limit": soft_limit, "plan_limit": FREE_PLAN_LIMIT,
             "remaining": max(0, soft_limit - used)}
 
 
-def search_jobs(conn: sqlite3.Connection, query: str, country: str, cfg: config.AppConfig,
+def search_jobs(conn: db.Database, query: str, country: str, cfg: config.AppConfig,
                 page: int = 1, *, dev: bool | None = None, today: date | None = None,
                 cache_dir: Path = config.CACHE_DIR, fixtures_dir: Path = config.FIXTURES_DIR) -> SearchResult:
     """Une recherche : fixtures (dev), sinon cache du jour, sinon appel API sous garde-fou quota."""
@@ -165,6 +164,10 @@ def search_jobs(conn: sqlite3.Connection, query: str, country: str, cfg: config.
     cached = cache_path(params, today or datetime.now(timezone.utc).date(), cache_dir)
     if cached.exists():
         return SearchResult(parse_response(_read_json(cached)), "cache")
+    if conn.is_postgres:  # Streamlit Cloud : le disque est effacé au redémarrage, la base non
+        stored = db.get_cached_response(conn, cached.name)
+        if stored is not None:
+            return SearchResult(parse_response(stored), "cache")
 
     used = db.get_api_usage(conn)
     if used >= cfg.quota_soft_limit:
@@ -181,10 +184,12 @@ def search_jobs(conn: sqlite3.Connection, query: str, country: str, cfg: config.
         db.increment_api_usage(conn)  # toute requête envoyée est comptée, même en erreur (prudence)
     jobs = parse_response(payload)
     _write_json(cached, payload)
+    if conn.is_postgres:
+        db.save_cached_response(conn, cached.name, payload)
     return SearchResult(jobs, "api")
 
 
-def collect(conn: sqlite3.Connection, queries: list[config.SearchQuery], cfg: config.AppConfig,
+def collect(conn: db.Database, queries: list[config.SearchQuery], cfg: config.AppConfig,
             **kwargs: Any) -> CollectSummary:
     """Lance les requêtes, enregistre les offres en base. Une erreur n'arrête que sa requête ;
     un quota atteint arrête la collecte."""

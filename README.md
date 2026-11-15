@@ -12,12 +12,13 @@ Aucun scraping : uniquement des API.
    RAPIDAPI_KEY = "..."
    GEMINI_API_KEY = "..."
    APP_PASSWORD = "un mot de passe"
+   DATABASE_URL = "postgresql://postgres.xxxx:MOT_DE_PASSE@aws-0-eu-west-3.pooler.supabase.com:6543/postgres"
    DEV_MODE = "1"
    ```
 3. `DEV_MODE = "1"` : les offres viennent de `tests/fixtures/` (aucun appel JSearch). Passe à `"0"` pour les vraies offres.
 
-⚠️ Sur Streamlit Cloud le disque est temporaire : la base SQLite (offres, statuts, compteur de quota) est effacée au
-redémarrage de l'app.
+Sans `DATABASE_URL`, l'app utilise SQLite, qui est effacé à chaque redémarrage sur Streamlit Cloud. Avec Supabase,
+offres, statuts, notes, compteur de quota et cache JSearch sont conservés. Les tables sont créées automatiquement.
 
 ## Réglages
 - `config.yaml` : fournisseur IA (`llm_provider`, `model`), requêtes, plafond de quota JSearch (180/200).
@@ -27,4 +28,6 @@ redémarrage de l'app.
 ```bash
 pip install -r requirements.txt
 python -m pytest -q
+# en plus sur Postgres (base de test vidée à chaque test) :
+TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:5432/scout_test python -m pytest -q
 ```

@@ -56,6 +56,36 @@ def on_streamlit_cloud() -> bool:
     return str(ROOT).startswith("/mount/src")
 
 
+def normaliser_url(url: str, mot_de_passe: str = "") -> str:
+    """Répare les erreurs de copie courantes dans l'adresse Supabase.
+
+    - guillemets ou espaces en trop autour de l'adresse ;
+    - crochets laissés autour du mot de passe ([MonMotDePasse]) ;
+    - caractères spéciaux du mot de passe (@ : / ? # % [ ]) : encodés automatiquement ;
+    - DATABASE_PASSWORD (optionnel) remplace le mot de passe de l'adresse.
+    """
+    from urllib.parse import quote, unquote
+
+    url = url.strip().strip("\"'").strip()
+    if "://" not in url or "@" not in url:
+        return url
+    schema, reste = url.split("://", 1)
+    identifiants, hote = reste.rsplit("@", 1)  # le dernier @ sépare toujours le mot de passe de l'hôte
+    if ":" not in identifiants:
+        return url
+    user, mdp = identifiants.split(":", 1)
+    if mot_de_passe:
+        mdp = mot_de_passe
+    elif mdp.startswith("[") and mdp.endswith("]") and mdp.upper() != "[YOUR-PASSWORD]":
+        mdp = mdp[1:-1]
+    return f"{schema}://{user}:{quote(unquote(mdp), safe='')}@{hote}"
+
+
+def database_url() -> str:
+    """Adresse Postgres (Supabase) ; vide = SQLite local. Ne jamais l'afficher : elle contient le mot de passe."""
+    return normaliser_url(os.getenv("DATABASE_URL", ""), os.getenv("DATABASE_PASSWORD", "").strip())
+
+
 def db_path() -> Path:
     """Chemin de la base SQLite (JOBS_DB pour le surcharger)."""
     return Path(os.getenv("JOBS_DB", DATA_DIR / "jobs.db"))

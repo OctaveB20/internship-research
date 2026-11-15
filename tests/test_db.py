@@ -1,5 +1,5 @@
 """Tests de src/db.py."""
-import sqlite3
+
 
 import pytest
 
@@ -9,8 +9,8 @@ from tests.conftest import make_job
 
 def test_init_db_creates_tables_and_is_idempotent(conn):
     db.init_db(conn)  # 2e appel sans erreur
-    tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    assert {"jobs", "extractions", "scores", "applications", "api_usage"} <= tables
+    tables = db.list_tables(conn)
+    assert {"jobs", "extractions", "scores", "applications", "api_usage", "api_cache"} <= tables
 
 
 def test_upsert_new_then_existing_keeps_first_seen(conn):
@@ -49,7 +49,7 @@ def test_jobs_without_extraction(conn):
 
 
 def test_extraction_requires_existing_job(conn):
-    with pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(db.integrity_errors()):
         db.save_extraction(conn, "inconnu", "m", {})
 
 
@@ -120,3 +120,30 @@ def test_dedupe_jobs_keeps_first_and_distinguishes_cities():
         make_job("d", job_city=None),
     ]
     assert [j["job_id"] for j in db.dedupe_jobs(jobs)] == ["a", "c", "d"]
+
+
+def test_api_cache_roundtrip(conn):
+    assert db.get_cached_response(conn, "k") is None
+    db.save_cached_response(conn, "k", {"status": "OK", "data": [1]})
+    db.save_cached_response(conn, "k", {"status": "OK", "data": [2]})
+    assert db.get_cached_response(conn, "k") == {"status": "OK", "data": [2]}
+
+
+def test_connect_uses_database_url_only_without_path(monkeypatch, tmp_path):
+    monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@host.invalid:6543/postgres")
+    c = db.connect(tmp_path / "x.db")  # un chemin explicite force SQLite
+    assert not c.is_postgres and c.describe() == "SQLite local"
+
+
+def test_json_helpers_by_dialect(conn):
+    db.upsert_job(conn, make_job())
+    db.save_extraction(conn, "j1", "m", {"city": "Paris", "duration_months_min": 6, "stipend_monthly_eur": 1400.5})
+    db.save_score(conn, "j1", 10, {"eliminated": True})
+    row = conn.execute(
+        f"SELECT {conn.json_text('e.extracted_json', 'city')} AS city, "
+        f"{conn.json_num('e.extracted_json', 'duration_months_min')} AS d, "
+        f"{conn.json_num('e.extracted_json', 'stipend_monthly_eur', integer=False)} AS s, "
+        f"{conn.json_true('s.breakdown_json', 'eliminated')} AS elim "
+        "FROM extractions e JOIN scores s ON s.job_id = e.job_id").fetchone()
+    assert (row["city"], row["d"], row["s"], bool(row["elim"])) == ("Paris", 6, 1400.5, True)
+    assert conn.execute(f"SELECT 1 FROM jobs WHERE job_city {conn.like} ?", ("%PARIS%",)).fetchone()

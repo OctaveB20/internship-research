@@ -1,4 +1,8 @@
-"""Stockage SQLite : schéma, upserts et requêtes simples (sans ORM)."""
+"""Stockage : SQLite en local, Postgres (Supabase) si DATABASE_URL est défini. Requêtes simples, sans ORM.
+
+Les deux bases passent par la même classe `Database` : les requêtes s'écrivent avec des `?`
+(traduits en `%s` pour Postgres) et les rares différences de SQL (JSON, LIKE) passent par ses méthodes.
+"""
 from __future__ import annotations
 
 import json
@@ -43,7 +47,7 @@ CREATE TABLE IF NOT EXISTS extractions (
 );
 CREATE TABLE IF NOT EXISTS scores (
     job_id TEXT PRIMARY KEY REFERENCES jobs(job_id) ON DELETE CASCADE,
-    score REAL NOT NULL,
+    score DOUBLE PRECISION NOT NULL,
     breakdown_json TEXT NOT NULL,
     scored_at TEXT NOT NULL
 );
@@ -52,6 +56,11 @@ CREATE TABLE IF NOT EXISTS applications (
     status TEXT NOT NULL CHECK (status IN ({", ".join(f"'{s}'" for s in STATUSES)})),
     notes TEXT NOT NULL DEFAULT '',
     updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS api_cache (
+    cache_key TEXT PRIMARY KEY,
+    payload TEXT NOT NULL,
+    created_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS api_usage (
     month TEXT PRIMARY KEY,
@@ -70,25 +79,130 @@ def current_month() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m")
 
 
-# ---------- Connexion ----------
-def connect(path: Path | str | None = None) -> sqlite3.Connection:
-    """Ouvre la base (créée si besoin), lignes accessibles par nom de colonne."""
+# ---------- Connexion (SQLite ou Postgres) ----------
+class Row(dict):
+    """Ligne accessible par nom de colonne (row["score"]) ou par position (row[0])."""
+
+    def __getitem__(self, key: Any) -> Any:
+        if isinstance(key, int):
+            return list(self.values())[key]
+        return super().__getitem__(key)
+
+
+class _Cursor:
+    def __init__(self, cursor: Any):
+        self._cur = cursor
+        self._cols = [d[0] for d in cursor.description] if cursor.description else []
+
+    def fetchone(self) -> Row | None:
+        row = self._cur.fetchone()
+        return Row(zip(self._cols, row)) if row is not None else None
+
+    def fetchall(self) -> list[Row]:
+        return [Row(zip(self._cols, r)) for r in self._cur.fetchall()]
+
+
+class Database:
+    """Connexion commune aux deux moteurs."""
+
+    def __init__(self, raw: Any, dialect: str):
+        self.raw, self.dialect = raw, dialect
+
+    @property
+    def is_postgres(self) -> bool:
+        return self.dialect == "postgres"
+
+    def execute(self, sql: str, params: Iterable[Any] = ()) -> _Cursor:
+        if self.is_postgres:
+            sql = sql.replace("?", "%s")
+        cur = self.raw.cursor()
+        cur.execute(sql, list(params))
+        return _Cursor(cur)
+
+    def commit(self) -> None:
+        self.raw.commit()
+
+    def close(self) -> None:
+        self.raw.close()
+
+    def __enter__(self) -> "Database":
+        return self
+
+    def __exit__(self, *exc: Any) -> None:
+        self.close()
+
+    # --- différences de SQL ---
+    @property
+    def like(self) -> str:
+        """Recherche insensible à la casse (LIKE l'est déjà en SQLite)."""
+        return "ILIKE" if self.is_postgres else "LIKE"
+
+    def json_text(self, col: str, key: str) -> str:
+        """Champ texte d'une colonne JSON."""
+        return f"({col}::jsonb ->> '{key}')" if self.is_postgres else f"json_extract({col}, '$.{key}')"
+
+    def json_num(self, col: str, key: str, integer: bool = True) -> str:
+        """Champ numérique d'une colonne JSON."""
+        if self.is_postgres:
+            return f"CAST({col}::jsonb ->> '{key}' AS {'INTEGER' if integer else 'DOUBLE PRECISION'})"
+        return f"json_extract({col}, '$.{key}')"
+
+    def json_true(self, col: str, key: str) -> str:
+        """Condition vraie si le booléen JSON vaut true (faux s'il est absent)."""
+        if self.is_postgres:
+            return f"COALESCE(({col}::jsonb ->> '{key}')::boolean, false)"
+        return f"(COALESCE(json_extract({col}, '$.{key}'), 0) = 1)"
+
+    def describe(self) -> str:
+        """Où sont les données (pour l'UI), sans jamais afficher d'identifiants."""
+        return "Supabase (Postgres)" if self.is_postgres else "SQLite local"
+
+
+def integrity_errors() -> tuple[type[Exception], ...]:
+    """Exceptions de contrainte (clé étrangère, CHECK…) des deux moteurs."""
+    errors: list[type[Exception]] = [sqlite3.IntegrityError]
+    try:
+        import psycopg
+        errors.append(psycopg.IntegrityError)
+    except ImportError:  # pragma: no cover
+        pass
+    return tuple(errors)
+
+
+def connect(path: Path | str | None = None, url: str | None = None) -> Database:
+    """Postgres si une URL est donnée (ou DATABASE_URL défini et pas de chemin), sinon SQLite."""
+    url = url if url is not None else ("" if path else config.database_url())
+    if url:
+        import psycopg
+        # autocommit : une requête = une transaction ; prepare_threshold=None : obligatoire avec le
+        # « Transaction pooler » de Supabase (port 6543), qui ne gère pas les requêtes préparées.
+        raw = psycopg.connect(url, autocommit=True, prepare_threshold=None, connect_timeout=10)
+        return Database(raw, "postgres")
     path = Path(path) if path else config.db_path()
     if str(path) != ":memory:":
         path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
+    raw = sqlite3.connect(path, check_same_thread=False)
+    raw.execute("PRAGMA foreign_keys = ON")
+    return Database(raw, "sqlite")
 
 
-def init_db(conn: sqlite3.Connection) -> None:
+def init_db(conn: Database) -> None:
     """Crée les tables manquantes."""
-    conn.executescript(SCHEMA)
+    for statement in SCHEMA.split(";"):
+        if statement.strip():
+            conn.execute(statement)
+    conn.commit()
+
+
+def list_tables(conn: Database) -> set[str]:
+    """Noms des tables existantes."""
+    sql = ("SELECT table_name FROM information_schema.tables WHERE table_schema = current_schema()"
+           if conn.is_postgres else "SELECT name FROM sqlite_master WHERE type = 'table'")
+    return {r[0] for r in conn.execute(sql).fetchall()}
 
 
 # ---------- jobs ----------
-def upsert_job(conn: sqlite3.Connection, job: dict[str, Any], seen_at: str | None = None) -> bool:
+def upsert_job(conn: Database, job: dict[str, Any], seen_at: str | None = None) -> bool:
     """Insère ou met à jour une offre JSearch. Renvoie True si l'offre est nouvelle."""
     if not job.get("job_id"):
         raise ValueError("job_id manquant")
@@ -109,23 +223,23 @@ def upsert_job(conn: sqlite3.Connection, job: dict[str, Any], seen_at: str | Non
     return is_new
 
 
-def upsert_jobs(conn: sqlite3.Connection, jobs: Iterable[dict[str, Any]], seen_at: str | None = None) -> int:
+def upsert_jobs(conn: Database, jobs: Iterable[dict[str, Any]], seen_at: str | None = None) -> int:
     """Upsert d'une liste d'offres. Renvoie le nombre d'offres nouvelles."""
     return sum(upsert_job(conn, j, seen_at) for j in jobs)
 
 
-def get_job(conn: sqlite3.Connection, job_id: str) -> dict[str, Any] | None:
+def get_job(conn: Database, job_id: str) -> dict[str, Any] | None:
     """Une offre par son job_id, ou None."""
     row = conn.execute("SELECT * FROM jobs WHERE job_id = ?", (job_id,)).fetchone()
     return dict(row) if row else None
 
 
-def count_jobs(conn: sqlite3.Connection) -> int:
+def count_jobs(conn: Database) -> int:
     """Nombre d'offres en base."""
     return conn.execute("SELECT COUNT(*) FROM jobs").fetchone()[0]
 
 
-def jobs_without_extraction(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+def jobs_without_extraction(conn: Database) -> list[dict[str, Any]]:
     """Offres jamais extraites (pour ne jamais payer deux fois la même annonce)."""
     rows = conn.execute(
         "SELECT j.* FROM jobs j LEFT JOIN extractions e ON e.job_id = j.job_id "
@@ -134,7 +248,7 @@ def jobs_without_extraction(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     return [dict(r) for r in rows]
 
 
-def list_jobs_overview(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+def list_jobs_overview(conn: Database) -> list[dict[str, Any]]:
     """Offres jointes à leur extraction, score et statut (JSON décodés), triées par score."""
     rows = conn.execute(
         "SELECT j.*, e.extracted_json, e.model, s.score, s.breakdown_json, "
@@ -193,32 +307,36 @@ def dedupe_jobs(jobs: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 # ---------- extractions ----------
-def save_extraction(conn: sqlite3.Connection, job_id: str, model: str, data: dict[str, Any]) -> None:
+def save_extraction(conn: Database, job_id: str, model: str, data: dict[str, Any]) -> None:
     """Enregistre (ou remplace) l'extraction d'une offre."""
     conn.execute(
-        "INSERT OR REPLACE INTO extractions (job_id, model, extracted_json, extracted_at) VALUES (?, ?, ?, ?)",
+        "INSERT INTO extractions (job_id, model, extracted_json, extracted_at) VALUES (?, ?, ?, ?) "
+        "ON CONFLICT(job_id) DO UPDATE SET model = excluded.model, extracted_json = excluded.extracted_json, "
+        "extracted_at = excluded.extracted_at",
         (job_id, model, json.dumps(data, ensure_ascii=False, default=str), now_iso()),
     )
     conn.commit()
 
 
-def get_extraction(conn: sqlite3.Connection, job_id: str) -> dict[str, Any] | None:
+def get_extraction(conn: Database, job_id: str) -> dict[str, Any] | None:
     """Extraction décodée d'une offre, ou None."""
     row = conn.execute("SELECT extracted_json FROM extractions WHERE job_id = ?", (job_id,)).fetchone()
     return json.loads(row[0]) if row else None
 
 
 # ---------- scores ----------
-def save_score(conn: sqlite3.Connection, job_id: str, score: float, breakdown: dict[str, Any]) -> None:
+def save_score(conn: Database, job_id: str, score: float, breakdown: dict[str, Any]) -> None:
     """Enregistre (ou remplace) le score d'une offre."""
     conn.execute(
-        "INSERT OR REPLACE INTO scores (job_id, score, breakdown_json, scored_at) VALUES (?, ?, ?, ?)",
+        "INSERT INTO scores (job_id, score, breakdown_json, scored_at) VALUES (?, ?, ?, ?) "
+        "ON CONFLICT(job_id) DO UPDATE SET score = excluded.score, breakdown_json = excluded.breakdown_json, "
+        "scored_at = excluded.scored_at",
         (job_id, float(score), json.dumps(breakdown, ensure_ascii=False, default=str), now_iso()),
     )
     conn.commit()
 
 
-def get_score(conn: sqlite3.Connection, job_id: str) -> dict[str, Any] | None:
+def get_score(conn: Database, job_id: str) -> dict[str, Any] | None:
     """{'score', 'breakdown', 'scored_at'} ou None."""
     row = conn.execute("SELECT * FROM scores WHERE job_id = ?", (job_id,)).fetchone()
     if not row:
@@ -227,20 +345,22 @@ def get_score(conn: sqlite3.Connection, job_id: str) -> dict[str, Any] | None:
 
 
 # ---------- applications ----------
-def set_application(conn: sqlite3.Connection, job_id: str, status: str, notes: str | None = None) -> None:
+def set_application(conn: Database, job_id: str, status: str, notes: str | None = None) -> None:
     """Met à jour le statut (et les notes si fournies) d'une candidature."""
     if status not in STATUSES:
         raise ValueError(f"Statut inconnu : {status!r} (attendu : {', '.join(STATUSES)})")
     current = get_application(conn, job_id)
     notes = current["notes"] if notes is None else notes
     conn.execute(
-        "INSERT OR REPLACE INTO applications (job_id, status, notes, updated_at) VALUES (?, ?, ?, ?)",
+        "INSERT INTO applications (job_id, status, notes, updated_at) VALUES (?, ?, ?, ?) "
+        "ON CONFLICT(job_id) DO UPDATE SET status = excluded.status, notes = excluded.notes, "
+        "updated_at = excluded.updated_at",
         (job_id, status, notes, now_iso()),
     )
     conn.commit()
 
 
-def get_application(conn: sqlite3.Connection, job_id: str) -> dict[str, Any]:
+def get_application(conn: Database, job_id: str) -> dict[str, Any]:
     """Statut et notes d'une offre (« à voir » par défaut)."""
     row = conn.execute("SELECT * FROM applications WHERE job_id = ?", (job_id,)).fetchone()
     if row:
@@ -248,19 +368,36 @@ def get_application(conn: sqlite3.Connection, job_id: str) -> dict[str, Any]:
     return {"job_id": job_id, "status": DEFAULT_STATUS, "notes": "", "updated_at": None}
 
 
+# ---------- api_cache (copie du cache disque, utile quand le disque est temporaire) ----------
+def get_cached_response(conn: Database, key: str) -> dict[str, Any] | None:
+    """Réponse JSearch mise en cache sous cette clé, ou None."""
+    row = conn.execute("SELECT payload FROM api_cache WHERE cache_key = ?", (key,)).fetchone()
+    return json.loads(row[0]) if row else None
+
+
+def save_cached_response(conn: Database, key: str, payload: dict[str, Any]) -> None:
+    """Enregistre une réponse JSearch (clé = nom du fichier de cache)."""
+    conn.execute(
+        "INSERT INTO api_cache (cache_key, payload, created_at) VALUES (?, ?, ?) "
+        "ON CONFLICT(cache_key) DO UPDATE SET payload = excluded.payload, created_at = excluded.created_at",
+        (key, json.dumps(payload, ensure_ascii=False), now_iso()),
+    )
+    conn.commit()
+
+
 # ---------- api_usage ----------
-def get_api_usage(conn: sqlite3.Connection, month: str | None = None) -> int:
+def get_api_usage(conn: Database, month: str | None = None) -> int:
     """Nombre d'appels JSearch réels du mois (YYYY-MM)."""
     row = conn.execute("SELECT count FROM api_usage WHERE month = ?", (month or current_month(),)).fetchone()
     return row[0] if row else 0
 
 
-def increment_api_usage(conn: sqlite3.Connection, month: str | None = None, n: int = 1) -> int:
+def increment_api_usage(conn: Database, month: str | None = None, n: int = 1) -> int:
     """Ajoute n appels au compteur du mois. Renvoie le nouveau total."""
     month = month or current_month()
     conn.execute(
         "INSERT INTO api_usage (month, count) VALUES (?, ?) "
-        "ON CONFLICT(month) DO UPDATE SET count = count + excluded.count",
+        "ON CONFLICT(month) DO UPDATE SET count = api_usage.count + excluded.count",
         (month, n),
     )
     conn.commit()

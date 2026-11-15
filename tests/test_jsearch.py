@@ -214,3 +214,13 @@ def test_collect_keeps_going_after_api_error(conn, cfg, tmp_path, fake_get):
 def test_fixture_duplicate_across_publishers_is_deduped():
     jobs = jsearch.load_fixtures()
     assert len(db.dedupe_jobs(jobs)) == len(jobs) - 1  # Altaïr publié sur LinkedIn et Indeed
+
+
+def test_postgres_keeps_cache_when_disk_is_wiped(conn, cfg, tmp_path, fake_get):
+    if not conn.is_postgres:
+        pytest.skip("copie en base uniquement avec Postgres")
+    search(conn, cfg, tmp_path)
+    for f in (tmp_path / "cache").iterdir():
+        f.unlink()  # redémarrage de Streamlit Cloud
+    assert search(conn, cfg, tmp_path).source == "cache"
+    assert len(fake_get.calls) == 1 and db.get_api_usage(conn) == 1

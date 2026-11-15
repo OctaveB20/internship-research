@@ -41,3 +41,32 @@ def test_password_gate(env, monkeypatch):
     assert at.error and not at.title
     at.text_input[0].input("s3cret").run()
     assert at.title[0].value == "Offres"
+
+
+def test_pipeline_on_postgres(env, monkeypatch):
+    from tests.conftest import TEST_PG_URL, reset_postgres
+    from src import db, ui
+    if not TEST_PG_URL:
+        pytest.skip("TEST_DATABASE_URL non défini")
+    reset_postgres(TEST_PG_URL)
+    ui._shared_postgres.clear()
+    monkeypatch.setenv("DATABASE_URL", TEST_PG_URL)
+    at = AppTest.from_file(RECHERCHE, default_timeout=30).run()
+    assert any("Supabase" in c.value for c in at.sidebar.caption)
+    at.button[0].click().run()
+    assert not at.exception and "20 nouvelle(s) offre(s)" in at.success[0].value
+    for page in PAGES:
+        assert not AppTest.from_file(page, default_timeout=30).run().exception
+    with db.connect(url=TEST_PG_URL) as c:
+        assert db.count_jobs(c) == 20
+    ui._shared_postgres.clear()
+
+
+def test_bad_database_url_is_readable(env, monkeypatch):
+    from src import ui
+    ui._shared_postgres.clear()
+    monkeypatch.setenv("DATABASE_URL", "postgresql://postgres.x:monmdp@127.0.0.1:1/postgres")
+    at = AppTest.from_file(OFFRES, default_timeout=30).run()
+    assert not at.exception
+    assert "Connexion à Supabase impossible" in at.error[0].value and "monmdp" not in at.error[0].value
+    ui._shared_postgres.clear()

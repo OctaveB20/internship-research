@@ -1,7 +1,6 @@
 """Score déterministe (sans IA) d'une offre extraite par rapport à profile.yaml, sur 100."""
 from __future__ import annotations
 
-import sqlite3
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Any
@@ -245,7 +244,7 @@ def score_job(ex: JobExtraction, job: dict[str, Any], p: config.Profile) -> Scor
     return ScoreResult(0.0 if reasons else raw, bool(reasons), reasons, components, matched, missing, raw)
 
 
-def score_all(conn: sqlite3.Connection, profile: config.Profile) -> int:
+def score_all(conn: db.Database, profile: config.Profile) -> int:
     """(Re)calcule le score de toutes les offres extraites. Gratuit et instantané. Renvoie le nombre scoré."""
     rows = conn.execute("SELECT j.*, e.extracted_json FROM jobs j JOIN extractions e ON e.job_id = j.job_id").fetchall()
     for row in rows:

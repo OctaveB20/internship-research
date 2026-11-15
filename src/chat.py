@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import sqlite3
 from typing import Any
 
 from src import config, db, llm
@@ -45,51 +44,51 @@ correspond, dis-le simplement.
 - Cite chaque offre avec son titre, son entreprise et son score (ex. « Stage FP&A — Lumen Capital Partners, 100/100 »).
 - Les offres éliminées (score 0) sont masquées par défaut ; explique la raison d'élimination si on te la demande."""
 
-_EX = "json_extract(e.extracted_json, '$.{}')"
-
-
-def search_jobs(conn: sqlite3.Connection, filters: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+def search_jobs(conn: db.Database, filters: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     """Requête SQL paramétrée construite à partir de filtres connus (les autres clés sont ignorées)."""
     f = {k: v for k, v in (filters or {}).items() if v not in (None, "")}
+    ex = lambda key: conn.json_text("e.extracted_json", key)  # noqa: E731
+    num = lambda key, integer=True: conn.json_num("e.extracted_json", key, integer)  # noqa: E731
+    like = conn.like
     where, params = [], []
     for word in str(f.get("keywords", "")).split():
-        where.append("(j.job_title LIKE ? OR j.employer_name LIKE ? OR j.job_description LIKE ? OR "
-                     f"{_EX.format('summary_fr')} LIKE ?)")
+        where.append(f"(j.job_title {like} ? OR j.employer_name {like} ? OR j.job_description {like} ? "
+                     f"OR {ex('summary_fr')} {like} ?)")
         params += [f"%{word}%"] * 4
     if "country" in f:
-        where.append(f"({_EX.format('country')} LIKE ? OR j.job_country LIKE ?)")
+        where.append(f"({ex('country')} {like} ? OR j.job_country {like} ?)")
         params += [f"%{f['country']}%"] * 2
     if "city" in f:
-        where.append(f"({_EX.format('city')} LIKE ? OR j.job_city LIKE ?)")
+        where.append(f"({ex('city')} {like} ? OR j.job_city {like} ?)")
         params += [f"%{f['city']}%"] * 2
     if "work_mode" in f:
-        where.append(f"{_EX.format('work_mode')} = ?")
+        where.append(f"{ex('work_mode')} = ?")
         params.append(str(f["work_mode"]))
     if "domain" in f:
-        where.append(f"{_EX.format('domain')} LIKE ?")
+        where.append(f"{ex('domain')} {like} ?")
         params.append(f"%{f['domain']}%")
     if "min_score" in f:
         where.append("s.score >= ?")
         params.append(float(f["min_score"]))
     if "max_duration_months" in f:
-        where.append(f"COALESCE({_EX.format('duration_months_min')}, {_EX.format('duration_months_max')}) <= ?")
+        where.append(f"COALESCE({num('duration_months_min')}, {num('duration_months_max')}) <= ?")
         params.append(int(f["max_duration_months"]))
     if "start_before" in f:
-        where.append(f"{_EX.format('start_date_earliest')} <= ?")
+        where.append(f"{ex('start_date_earliest')} <= ?")
         params.append(str(f["start_before"])[:10])
     if "status" in f:
         where.append("COALESCE(a.status, ?) = ?")
         params += [db.DEFAULT_STATUS, str(f["status"])]
     if not f.get("include_eliminated"):
-        where.append("COALESCE(json_extract(s.breakdown_json, '$.eliminated'), 0) = 0")
+        where.append(f"NOT {conn.json_true('s.breakdown_json', 'eliminated')}")
     limit = max(1, min(int(f.get("limit") or 10), MAX_RESULTS))
     sql = (
         "SELECT j.job_id, j.job_title, j.employer_name, "
-        f"COALESCE({_EX.format('city')}, j.job_city) AS city, COALESCE({_EX.format('country')}, j.job_country) AS country, "
-        f"{_EX.format('work_mode')} AS work_mode, {_EX.format('duration_months_min')} AS duration_min, "
-        f"{_EX.format('duration_months_max')} AS duration_max, {_EX.format('start_date_earliest')} AS start, "
-        f"{_EX.format('domain')} AS domain, {_EX.format('stipend_monthly_eur')} AS stipend_eur, "
-        f"{_EX.format('summary_fr')} AS summary, s.score, json_extract(s.breakdown_json, '$.reasons') AS elimination, "
+        f"COALESCE({ex('city')}, j.job_city) AS city, COALESCE({ex('country')}, j.job_country) AS country, "
+        f"{ex('work_mode')} AS work_mode, {num('duration_months_min')} AS duration_min, "
+        f"{num('duration_months_max')} AS duration_max, {ex('start_date_earliest')} AS start, "
+        f"{ex('domain')} AS domain, {num('stipend_monthly_eur', integer=False)} AS stipend_eur, "
+        f"{ex('summary_fr')} AS summary, s.score, {conn.json_text('s.breakdown_json', 'reasons')} AS elimination, "
         "COALESCE(a.status, ?) AS status, j.job_apply_link AS apply_link "
         "FROM jobs j LEFT JOIN extractions e ON e.job_id = j.job_id LEFT JOIN scores s ON s.job_id = j.job_id "
         "LEFT JOIN applications a ON a.job_id = j.job_id"
@@ -105,7 +104,7 @@ def search_jobs(conn: sqlite3.Connection, filters: dict[str, Any] | None = None)
     return out
 
 
-def get_job(conn: sqlite3.Connection, job_id: str) -> dict[str, Any]:
+def get_job(conn: db.Database, job_id: str) -> dict[str, Any]:
     """Offre complète, ou une erreur si l'identifiant est inconnu."""
     job = db.get_job(conn, job_id)
     if not job:
@@ -124,7 +123,7 @@ def get_job(conn: sqlite3.Connection, job_id: str) -> dict[str, Any]:
     }
 
 
-def run_tool(conn: sqlite3.Connection, name: str, args: dict[str, Any]) -> Any:
+def run_tool(conn: db.Database, name: str, args: dict[str, Any]) -> Any:
     """Exécute un des 2 outils autorisés."""
     if name == "search_jobs":
         return search_jobs(conn, args.get("filters", args))  # tolère {"filters": {...}} ou les filtres à plat
@@ -133,7 +132,7 @@ def run_tool(conn: sqlite3.Connection, name: str, args: dict[str, Any]) -> Any:
     return {"error": f"Outil inconnu : {name}"}
 
 
-def ask_llm(conn: sqlite3.Connection, cfg: config.AppConfig, history: list[dict[str, str]],
+def ask_llm(conn: db.Database, cfg: config.AppConfig, history: list[dict[str, str]],
             client: llm.LLMClient | None = None) -> llm.ChatResult:
     """Appel IA (peut être payant) : répond au dernier message de `history` en interrogeant la base."""
     client = client or llm.make_client(cfg)

@@ -4,7 +4,6 @@ from __future__ import annotations
 import json
 import logging
 import re
-import sqlite3
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
@@ -205,7 +204,7 @@ class ExtractSummary:
     errors: list[str] = field(default_factory=list)
 
 
-def extract_new_jobs(conn: sqlite3.Connection, cfg: config.AppConfig, *, client: llm.LLMClient | None = None,
+def extract_new_jobs(conn: db.Database, cfg: config.AppConfig, *, client: llm.LLMClient | None = None,
                      dev: bool | None = None, limit: int | None = None,
                      progress: Callable[[int, int, str], None] | None = None) -> ExtractSummary:
     """Extrait les offres jamais extraites. En mode dev, les fixtures connues utilisent la référence

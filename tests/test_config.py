@@ -41,3 +41,14 @@ def test_dev_mode_and_secrets(monkeypatch):
     monkeypatch.delenv("RAPIDAPI_KEY")
     assert config.dev_mode() is False
     assert config.get_secret("RAPIDAPI_KEY") == ""
+
+
+@pytest.mark.parametrize("raw, password, expected", [
+    ('"postgresql://postgres.abc:[p@ss:w]@aws-0.pooler.supabase.com:6543/postgres" ', "",
+     "postgresql://postgres.abc:p%40ss%3Aw@aws-0.pooler.supabase.com:6543/postgres"),
+    ("postgresql://postgres.abc:[YOUR-PASSWORD]@h:6543/postgres", "vrai#mdp",
+     "postgresql://postgres.abc:vrai%23mdp@h:6543/postgres"),
+    ("", "", ""),
+])
+def test_normaliser_url(raw, password, expected):
+    assert config.normaliser_url(raw, password) == expected
