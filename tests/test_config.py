@@ -9,7 +9,7 @@ from src import config
 
 def test_project_yaml_files_are_valid():
     cfg = config.load_config()
-    assert cfg.model == "claude-haiku-5-5"
+    assert cfg.llm_provider == "gemini" and cfg.model == "gemini-2.5-flash"
     assert cfg.quota_soft_limit == 180
     assert len(cfg.queries) == 3
     prof = config.load_profile()

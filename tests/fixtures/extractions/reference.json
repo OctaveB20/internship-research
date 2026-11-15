@@ -1,0 +1,585 @@
+{
+ "ZnItYWx0YWlyLWNnLWxp==": {
+  "is_internship": true,
+  "contract_type": "stage",
+  "city": "Paris",
+  "country": "France",
+  "work_mode": "hybrid",
+  "duration_months_min": 6,
+  "duration_months_max": 6,
+  "start_date_earliest": "2027-01-01",
+  "start_date_text": "à partir de janvier 2027",
+  "required_skills": [
+   "Excel"
+  ],
+  "nice_to_have_skills": [
+   "SAP",
+   "Power BI"
+  ],
+  "languages": [
+   {
+    "lang": "English",
+    "level": "fluent"
+   }
+  ],
+  "education_level": "Bac+5",
+  "stipend_monthly_eur": 1400,
+  "requires_convention": true,
+  "domain": "contrôle de gestion",
+  "summary_fr": "Stage de 6 mois en contrôle de gestion au siège parisien d'un distributeur B2B : clôtures, reportings et budget 2027. Gratification de 1 400 € bruts par mois."
+ },
+ "ZnItYWx0YWlyLWNnLWlu==": {
+  "is_internship": true,
+  "contract_type": "stage",
+  "city": "Paris",
+  "country": "France",
+  "work_mode": "hybrid",
+  "duration_months_min": 6,
+  "duration_months_max": 6,
+  "start_date_earliest": "2027-01-01",
+  "start_date_text": "à partir de janvier 2027",
+  "required_skills": [
+   "Excel"
+  ],
+  "nice_to_have_skills": [
+   "SAP",
+   "Power BI"
+  ],
+  "languages": [
+   {
+    "lang": "English",
+    "level": "fluent"
+   }
+  ],
+  "education_level": "Bac+5",
+  "stipend_monthly_eur": 1400,
+  "requires_convention": true,
+  "domain": "contrôle de gestion",
+  "summary_fr": "Stage de 6 mois en contrôle de gestion au siège parisien d'un distributeur B2B : clôtures, reportings et budget 2027. Gratification de 1 400 € bruts par mois."
+ },
+ "ZnItbHVtZW4tZnBh==": {
+  "is_internship": true,
+  "contract_type": "stage",
+  "city": "Paris",
+  "country": "France",
+  "work_mode": "hybrid",
+  "duration_months_min": 6,
+  "duration_months_max": 6,
+  "start_date_earliest": "2027-02-01",
+  "start_date_text": "starting February 2027",
+  "required_skills": [
+   "Excel"
+  ],
+  "nice_to_have_skills": [
+   "Python",
+   "SQL"
+  ],
+  "languages": [
+   {
+    "lang": "English",
+    "level": "fluent"
+   },
+   {
+    "lang": "French",
+    "level": null
+   }
+  ],
+  "education_level": "Master",
+  "stipend_monthly_eur": 1600,
+  "requires_convention": true,
+  "domain": "FP&A",
+  "summary_fr": "Stage FP&A de 6 mois dans un fonds de private equity à Paris : forecasts, modèles financiers et tableaux de bord KPI. 1 600 € bruts par mois, en hybride."
+ },
+ "ZnItb3Jpb24tYWY===": {
+  "is_internship": true,
+  "contract_type": "stage",
+  "city": "Puteaux",
+  "country": "France",
+  "work_mode": "onsite",
+  "duration_months_min": 4,
+  "duration_months_max": 6,
+  "start_date_earliest": "2027-03-01",
+  "start_date_text": "à pourvoir en mars 2027",
+  "required_skills": [
+   "Excel",
+   "VBA"
+  ],
+  "nice_to_have_skills": [],
+  "languages": [
+   {
+    "lang": "English",
+    "level": "professional"
+   }
+  ],
+  "education_level": "Master",
+  "stipend_monthly_eur": null,
+  "requires_convention": null,
+  "domain": "planification financière",
+  "summary_fr": "Stage de 4 à 6 mois en planification financière dans une banque à La Défense : prévisions de résultat et de liquidité, outils Excel/VBA."
+ },
+ "ZnItdmVyZGFuZS1jZGk===": {
+  "is_internship": false,
+  "contract_type": "autre",
+  "city": "Paris",
+  "country": "France",
+  "work_mode": "unknown",
+  "duration_months_min": null,
+  "duration_months_max": null,
+  "start_date_earliest": "2026-11-11",
+  "start_date_text": "dès que possible",
+  "required_skills": [
+   "Excel",
+   "SAP",
+   "SAP BO"
+  ],
+  "nice_to_have_skills": [],
+  "languages": [],
+  "education_level": "Bac+5",
+  "stipend_monthly_eur": null,
+  "requires_convention": null,
+  "domain": "contrôle de gestion",
+  "summary_fr": "CDI de contrôleur de gestion junior (42 à 45 k€ annuels) : clôtures, suivi des coûts de production et reporting groupe."
+ },
+ "ZnItY2VsZXN0ZS1hbHQ===": {
+  "is_internship": false,
+  "contract_type": "alternance",
+  "city": "Paris",
+  "country": "France",
+  "work_mode": "unknown",
+  "duration_months_min": 12,
+  "duration_months_max": 12,
+  "start_date_earliest": "2027-01-01",
+  "start_date_text": "à partir de janvier 2027",
+  "required_skills": [
+   "Excel"
+  ],
+  "nice_to_have_skills": [
+   "Power BI"
+  ],
+  "languages": [
+   {
+    "lang": "English",
+    "level": "professional"
+   }
+  ],
+  "education_level": "Master",
+  "stipend_monthly_eur": null,
+  "requires_convention": null,
+  "domain": "contrôle de gestion",
+  "summary_fr": "Alternance de 12 mois en contrôle de gestion chez une marque de cosmétiques : suivi des ventes, marges et budget. Rythme 3 semaines en entreprise, 1 semaine à l'école."
+ },
+ "ZnItZmVydG9pcy1jZ2k===": {
+  "is_internship": true,
+  "contract_type": "stage",
+  "city": "Lyon",
+  "country": "France",
+  "work_mode": "onsite",
+  "duration_months_min": 6,
+  "duration_months_max": 6,
+  "start_date_earliest": "2027-04-01",
+  "start_date_text": "à partir d'avril 2027",
+  "required_skills": [
+   "Excel"
+  ],
+  "nice_to_have_skills": [
+   "SAP"
+  ],
+  "languages": [],
+  "education_level": null,
+  "stipend_monthly_eur": null,
+  "requires_convention": null,
+  "domain": "contrôle de gestion",
+  "summary_fr": "Stage de 6 mois en contrôle de gestion industriel dans une usine lyonnaise : prix de revient, écarts sur coûts standards et clôture. Gratification au minimum légal."
+ },
+ "ZnItbWVybGluLWF1ZGl0==": {
+  "is_internship": true,
+  "contract_type": "stage",
+  "city": "Paris",
+  "country": "France",
+  "work_mode": "unknown",
+  "duration_months_min": 6,
+  "duration_months_max": 6,
+  "start_date_earliest": "2027-09-01",
+  "start_date_text": "à partir de septembre 2027",
+  "required_skills": [
+   "Excel"
+  ],
+  "nice_to_have_skills": [],
+  "languages": [
+   {
+    "lang": "English",
+    "level": "basic"
+   }
+  ],
+  "education_level": "Master",
+  "stipend_monthly_eur": 1500,
+  "requires_convention": null,
+  "domain": "audit",
+  "summary_fr": "Stage de 6 mois en audit financier dans un cabinet parisien à partir de septembre 2027 : missions de commissariat aux comptes auprès de PME et ETI."
+ },
+ "ZnIta2VzdHJlbC1sdXg===": {
+  "is_internship": true,
+  "contract_type": "stage",
+  "city": "Luxembourg",
+  "country": "Luxembourg",
+  "work_mode": "unknown",
+  "duration_months_min": 6,
+  "duration_months_max": 6,
+  "start_date_earliest": "2027-01-01",
+  "start_date_text": "January 2027",
+  "required_skills": [
+   "Excel"
+  ],
+  "nice_to_have_skills": [],
+  "languages": [
+   {
+    "lang": "English",
+    "level": "fluent"
+   },
+   {
+    "lang": "French",
+    "level": "fluent"
+   },
+   {
+    "lang": "German",
+    "level": null
+   }
+  ],
+  "education_level": "Master",
+  "stipend_monthly_eur": 1300,
+  "requires_convention": null,
+  "domain": "finance d'entreprise",
+  "summary_fr": "Stage de 6 mois en corporate finance chez un administrateur de fonds au Luxembourg : états financiers, contrôles de NAV et analyses pour le CFO."
+ },
+ "ZnItbmVvbGVkZ2VyLWJh==": {
+  "is_internship": true,
+  "contract_type": "stage",
+  "city": null,
+  "country": "France",
+  "work_mode": "remote",
+  "duration_months_min": 2,
+  "duration_months_max": 2,
+  "start_date_earliest": "2026-11-14",
+  "start_date_text": "dès que possible",
+  "required_skills": [
+   "SQL",
+   "Excel"
+  ],
+  "nice_to_have_skills": [
+   "Metabase"
+  ],
+  "languages": [
+   {
+    "lang": "English",
+    "level": "fluent"
+   }
+  ],
+  "education_level": "Bac+3",
+  "stipend_monthly_eur": null,
+  "requires_convention": null,
+  "domain": "business analysis finance",
+  "summary_fr": "Stage de 2 mois en full remote dans une fintech : analyse des données clients, tableaux de bord Metabase et requêtes SQL."
+ },
+ "ZGUtYnJlbm53YWxkLWN0cm==": {
+  "is_internship": true,
+  "contract_type": "stage",
+  "city": "München",
+  "country": "Germany",
+  "work_mode": "hybrid",
+  "duration_months_min": 6,
+  "duration_months_max": 6,
+  "start_date_earliest": "2027-01-01",
+  "start_date_text": "ab Januar 2027",
+  "required_skills": [
+   "Excel"
+  ],
+  "nice_to_have_skills": [
+   "SAP"
+  ],
+  "languages": [
+   {
+    "lang": "German",
+    "level": "fluent"
+   },
+   {
+    "lang": "English",
+    "level": "professional"
+   }
+  ],
+  "education_level": "Master",
+  "stipend_monthly_eur": 1800,
+  "requires_convention": true,
+  "domain": "contrôle de gestion",
+  "summary_fr": "Stage de 6 mois en controlling chez un industriel munichois : clôtures, analyses d'écarts et budget 2027. 1 800 € bruts par mois, stage obligatoire (Pflichtpraktikum)."
+ },
+ "ZGUtaGVsaXgtZnBh==": {
+  "is_internship": true,
+  "contract_type": "stage",
+  "city": "München",
+  "country": "Germany",
+  "work_mode": "hybrid",
+  "duration_months_min": 5,
+  "duration_months_max": 6,
+  "start_date_earliest": "2027-03-01",
+  "start_date_text": "starting March 2027",
+  "required_skills": [
+   "Excel",
+   "Power BI"
+  ],
+  "nice_to_have_skills": [
+   "SQL"
+  ],
+  "languages": [
+   {
+    "lang": "English",
+    "level": "fluent"
+   },
+   {
+    "lang": "German",
+    "level": null
+   }
+  ],
+  "education_level": null,
+  "stipend_monthly_eur": 1700,
+  "requires_convention": null,
+  "domain": "FP&A",
+  "summary_fr": "Stage FP&A de 5 à 6 mois dans une scale-up de recharge électrique à Munich : business reviews, forecasts et tableaux de bord Power BI. 1 700 € bruts par mois."
+ },
+ "ZGUtaXNhcndlcmstd3M===": {
+  "is_internship": false,
+  "contract_type": "working_student",
+  "city": "München",
+  "country": "Germany",
+  "work_mode": "unknown",
+  "duration_months_min": null,
+  "duration_months_max": null,
+  "start_date_earliest": "2026-11-12",
+  "start_date_text": "ab sofort",
+  "required_skills": [
+   "MS Office"
+  ],
+  "nice_to_have_skills": [],
+  "languages": [
+   {
+    "lang": "German",
+    "level": "fluent"
+   }
+  ],
+  "education_level": null,
+  "stipend_monthly_eur": null,
+  "requires_convention": null,
+  "domain": "comptabilité",
+  "summary_fr": "Poste de Werkstudent (16 à 20 h par semaine, sans limite de durée) en comptabilité fournisseurs et rapprochements. 17 € de l'heure."
+ },
+ "ZGUta2FsdGVuYmVyZy1mYQ==": {
+  "is_internship": false,
+  "contract_type": "autre",
+  "city": "Frankfurt am Main",
+  "country": "Germany",
+  "work_mode": "unknown",
+  "duration_months_min": null,
+  "duration_months_max": null,
+  "start_date_earliest": "2026-11-10",
+  "start_date_text": "zum nächstmöglichen Zeitpunkt",
+  "required_skills": [
+   "SAP S/4HANA"
+  ],
+  "nice_to_have_skills": [],
+  "languages": [
+   {
+    "lang": "English",
+    "level": "fluent"
+   }
+  ],
+  "education_level": null,
+  "stipend_monthly_eur": null,
+  "requires_convention": null,
+  "domain": "contrôle de gestion",
+  "summary_fr": "CDI de Senior Financial Analyst à Francfort, 5 ans d'expérience minimum : reporting groupe et business partnering."
+ },
+ "ZGUtdGVnZXJuc2VlLW1h==": {
+  "is_internship": true,
+  "contract_type": "stage",
+  "city": "München",
+  "country": "Germany",
+  "work_mode": "unknown",
+  "duration_months_min": 3,
+  "duration_months_max": 3,
+  "start_date_earliest": "2027-04-01",
+  "start_date_text": "starting April 2027",
+  "required_skills": [
+   "Excel",
+   "PowerPoint"
+  ],
+  "nice_to_have_skills": [],
+  "languages": [
+   {
+    "lang": "English",
+    "level": "fluent"
+   },
+   {
+    "lang": "German",
+    "level": "fluent"
+   }
+  ],
+  "education_level": null,
+  "stipend_monthly_eur": null,
+  "requires_convention": null,
+  "domain": "M&A",
+  "summary_fr": "Stage de 3 mois en M&A dans une boutique de conseil munichoise : valorisations, modèles financiers et pitch books."
+ },
+ "ZGUtcmhlaW5mZWxzLXRyZW==": {
+  "is_internship": true,
+  "contract_type": "stage",
+  "city": "Frankfurt am Main",
+  "country": "Germany",
+  "work_mode": "unknown",
+  "duration_months_min": 6,
+  "duration_months_max": 6,
+  "start_date_earliest": "2027-02-01",
+  "start_date_text": "01.02.2027",
+  "required_skills": [
+   "Excel"
+  ],
+  "nice_to_have_skills": [
+   "VBA"
+  ],
+  "languages": [
+   {
+    "lang": "English",
+    "level": "fluent"
+   }
+  ],
+  "education_level": null,
+  "stipend_monthly_eur": null,
+  "requires_convention": null,
+  "domain": "trésorerie",
+  "summary_fr": "Stage de 6 mois en trésorerie groupe dans une banque de Francfort : planification de la liquidité et automatisation de reportings Excel/VBA."
+ },
+ "ZGUtYXVicmFjLWNn==": {
+  "is_internship": true,
+  "contract_type": "stage",
+  "city": "München",
+  "country": "Germany",
+  "work_mode": "unknown",
+  "duration_months_min": 6,
+  "duration_months_max": 6,
+  "start_date_earliest": "2027-01-01",
+  "start_date_text": "à partir de janvier 2027",
+  "required_skills": [
+   "Excel"
+  ],
+  "nice_to_have_skills": [
+   "Power BI"
+  ],
+  "languages": [
+   {
+    "lang": "French",
+    "level": "fluent"
+   },
+   {
+    "lang": "English",
+    "level": "fluent"
+   },
+   {
+    "lang": "German",
+    "level": "B1"
+   }
+  ],
+  "education_level": null,
+  "stipend_monthly_eur": 1500,
+  "requires_convention": null,
+  "domain": "contrôle de gestion",
+  "summary_fr": "Stage de 6 mois en contrôle de gestion dans la filiale munichoise d'un groupe ferroviaire français, possible VIE ensuite. 1 500 € par mois et aide au logement."
+ },
+ "ZGUtZGF0YWZpbi1yZW1vdG==": {
+  "is_internship": true,
+  "contract_type": "stage",
+  "city": null,
+  "country": "Germany",
+  "work_mode": "remote",
+  "duration_months_min": 4,
+  "duration_months_max": 6,
+  "start_date_earliest": null,
+  "start_date_text": "flexible start date",
+  "required_skills": [
+   "Python",
+   "SQL",
+   "Excel"
+  ],
+  "nice_to_have_skills": [],
+  "languages": [
+   {
+    "lang": "English",
+    "level": "fluent"
+   }
+  ],
+  "education_level": null,
+  "stipend_monthly_eur": null,
+  "requires_convention": null,
+  "domain": "finance d'entreprise",
+  "summary_fr": "Stage de 4 à 6 mois en full remote dans une start-up de benchmarking financier : analyse de données en Python et SQL, notes de recherche et démo Streamlit."
+ },
+ "ZGUtYWxwZW5ibGljay1hY2==": {
+  "is_internship": true,
+  "contract_type": "stage",
+  "city": "Garmisch-Partenkirchen",
+  "country": "Germany",
+  "work_mode": "unknown",
+  "duration_months_min": 6,
+  "duration_months_max": 6,
+  "start_date_earliest": "2027-10-01",
+  "start_date_text": "ab Oktober 2027",
+  "required_skills": [
+   "Excel"
+  ],
+  "nice_to_have_skills": [],
+  "languages": [
+   {
+    "lang": "German",
+    "level": "professional"
+   },
+   {
+    "lang": "English",
+    "level": "professional"
+   }
+  ],
+  "education_level": null,
+  "stipend_monthly_eur": 1200,
+  "requires_convention": true,
+  "domain": "comptabilité",
+  "summary_fr": "Stage de 6 mois en comptabilité dans un groupe hôtelier à partir d'octobre 2027 : comptabilité, vérification des factures et clôture annuelle. 1 200 € bruts par mois."
+ },
+ "ZGUtZG9uYXVzdGFobC13aW==": {
+  "is_internship": true,
+  "contract_type": "stage",
+  "city": "Wien",
+  "country": "Austria",
+  "work_mode": "unknown",
+  "duration_months_min": 6,
+  "duration_months_max": 6,
+  "start_date_earliest": "2027-02-01",
+  "start_date_text": "ab Februar 2027",
+  "required_skills": [
+   "Excel"
+  ],
+  "nice_to_have_skills": [
+   "Power BI"
+  ],
+  "languages": [
+   {
+    "lang": "German",
+    "level": "fluent"
+   },
+   {
+    "lang": "English",
+    "level": "fluent"
+   }
+  ],
+  "education_level": null,
+  "stipend_monthly_eur": 1650,
+  "requires_convention": null,
+  "domain": "contrôle de gestion",
+  "summary_fr": "Stage de 6 mois en business controlling à Vienne à partir de février 2027 : coûts, marges et forecasts. 1 650 € bruts par mois."
+ }
+}

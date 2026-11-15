@@ -51,6 +51,11 @@ def dev_mode() -> bool:
     return os.getenv("DEV_MODE", "").strip().lower() in {"1", "true", "yes", "on"}
 
 
+def on_streamlit_cloud() -> bool:
+    """True si l'app tourne sur Streamlit Community Cloud (disque non persistant)."""
+    return str(ROOT).startswith("/mount/src")
+
+
 def db_path() -> Path:
     """Chemin de la base SQLite (JOBS_DB pour le surcharger)."""
     return Path(os.getenv("JOBS_DB", DATA_DIR / "jobs.db"))
@@ -62,8 +67,15 @@ class SearchQuery(BaseModel):
     country: str = "fr"
 
 
+LLM_KEYS = {"gemini": "GEMINI_API_KEY", "groq": "GROQ_API_KEY", "anthropic": "ANTHROPIC_API_KEY"}
+
+
 class AppConfig(BaseModel):
-    model: str = "claude-haiku-5-5"
+    llm_provider: Literal["gemini", "groq", "anthropic"] = "gemini"
+    model: str = "gemini-2.5-flash"
+    price_input_per_mtok: float = Field(0, ge=0)
+    price_output_per_mtok: float = Field(0, ge=0)
+    llm_timeout_s: float = 90
     quota_soft_limit: int = Field(180, ge=0, le=200)
     date_posted: Literal["all", "today", "3days", "week", "month"] = "week"
     employment_types: str = "INTERN"
