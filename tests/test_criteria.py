@@ -120,3 +120,22 @@ def test_dev_mode_unknown_country_returns_nothing(conn, base):
 
 def test_internship_filter_off_by_default():
     assert crit.SearchCriteria(titles=["x"], countries=["France"]).internship_only is False
+
+
+def test_previously_searched_countries_are_not_eliminated(conn, base):
+    profile, _ = base
+    first = crit.SearchCriteria(titles=["x"], countries=["Spain"])
+    crit.record_searched(conn, first.countries)
+    second = crit.SearchCriteria(titles=["x"], countries=["France"])
+    crit.record_searched(conn, second.countries)
+    p = crit.effective_profile(conn, profile, second)
+    assert p.target_countries == ["France", "Spain"]
+    r = scoring.score_job(_ex(), make_job(job_city="Madrid", job_country="ES"), p)
+    assert not any("pays hors liste" in x for x in r.reasons)
+    assert crit.searched_countries(conn) == ["Spain", "France"]
+
+
+def test_history_seeded_from_jobs_in_base(conn):
+    from src import db
+    db.upsert_jobs(conn, [make_job("a", job_country="BE"), make_job("b", job_country="NL"), make_job("c", job_country="US")])
+    assert crit.searched_countries(conn) == ["Belgium", "Netherlands"]

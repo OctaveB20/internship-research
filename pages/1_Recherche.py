@@ -132,7 +132,9 @@ launch = row.button("Lancer la recherche", type="primary", icon=":material/rocke
 
 if (save_only or launch) and current:
     crit.save(conn, current)
-    profile = crit.apply_to_profile(base_profile, current)
+    if launch:
+        crit.record_searched(conn, current.countries)
+    profile = crit.effective_profile(conn, base_profile, current)
     if save_only:
         st.toast(f"Critères enregistrés, {scoring.score_all(conn, profile)} offre(s) rescorée(s).")
 

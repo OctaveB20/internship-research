@@ -4,7 +4,7 @@ import json
 import pandas as pd
 import streamlit as st
 
-from src import db, offers, ui
+from src import db, extract, llm, offers, scoring, ui
 
 conn, cfg, profile = ui.setup_page("Offres", ":material/work:", "Triées par score. Clique sur une ligne pour voir la fiche.")
 rows = offers.load_offers(conn)
@@ -58,6 +58,28 @@ with m3:
     ui.metric_card("Score ≥ 75", sum((r["score"] or 0) >= 75 for r in kept))
 with m4:
     ui.metric_card("Avec gratification", sum(bool(r["gratification"]) for r in kept))
+
+# ---------- Offres masquées ou en attente ----------
+n_elim = sum(r["éliminée"] for r in rows)
+pending = [r for r in rows if not r["extraite"]]
+notes = []
+if hide_elim and n_elim:
+    notes.append(f"{n_elim} offre(s) éliminée(s) par tes critères sont masquées "
+                 "(décoche « Masquer les éliminées » pour les voir avec la raison)")
+if pending:
+    notes.append(f"{len(pending)} offre(s) pas encore analysée(s) par l'IA (sans score)")
+if notes:
+    info, action = st.columns([4, 1], vertical_alignment="center")
+    info.info(" · ".join(notes) + ".")
+    if pending and action.button("Analyser maintenant", icon=":material/auto_awesome:", disabled=not llm.has_key(cfg),
+                                 help="Lance l'extraction IA sur les offres en attente, puis recalcule les scores."):
+        with st.spinner("Analyse des offres en attente…"):
+            summary = extract.extract_new_jobs(conn, cfg)
+            scoring.score_all(conn, profile)
+        for err in summary.errors:
+            st.warning(err)
+        st.toast(f"{summary.extracted + summary.from_reference} offre(s) analysée(s).")
+        st.rerun()
 
 if not shown:
     st.warning("Aucune offre ne passe les filtres.")

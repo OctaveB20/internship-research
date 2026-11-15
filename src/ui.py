@@ -109,7 +109,7 @@ def setup_page(title: str, icon: str = ":material/target:", subtitle: str = ""
         st.error(f"config.yaml ou profile.yaml invalide : {e}")
         st.stop()
     conn = get_connection()
-    profile = criteria.apply_to_profile(profile, criteria.load(conn, profile, cfg))  # critères de la page Recherche
+    profile = criteria.effective_profile(conn, profile, criteria.load(conn, profile, cfg))  # critères de la page Recherche
     with st.sidebar:
         if config.dev_mode():
             st.info("Mode dev : offres lues dans les fixtures, aucun appel JSearch.")

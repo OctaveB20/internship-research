@@ -7,6 +7,7 @@ Ils servent à deux choses :
 from __future__ import annotations
 
 import calendar
+import json
 from datetime import date
 from typing import Literal
 
@@ -15,6 +16,7 @@ from pydantic import BaseModel, Field, field_validator
 from src import config, db
 
 SETTINGS_KEY = "search_criteria"
+HISTORY_KEY = "searched_countries"  # tous les pays déjà recherchés
 
 # Nom (anglais, utilisé par le score) → (code ISO pour JSearch, libellé affiché)
 EUROPE: dict[str, tuple[str, str]] = {
@@ -134,9 +136,34 @@ def build_queries(criteria: SearchCriteria) -> list[config.SearchQuery]:
             for t in criteria.titles for c in criteria.countries for p in range(1, criteria.pages + 1)]
 
 
-def apply_to_profile(profile: config.Profile, criteria: SearchCriteria) -> config.Profile:
+def searched_countries(conn: db.Database) -> list[str]:
+    """Pays déjà recherchés (toutes recherches confondues)."""
+    raw = db.get_setting(conn, HISTORY_KEY)
+    if raw:
+        return json.loads(raw)
+    # Pas encore d'historique (offres collectées avant son ajout) : pays des offres déjà en base.
+    by_code = {code: name for name, (code, _) in EUROPE.items()}
+    codes = {str(r[0]).lower() for r in conn.execute("SELECT DISTINCT job_country FROM jobs").fetchall() if r[0]}
+    return [by_code[c] for c in sorted(codes) if c in by_code]
+
+
+def record_searched(conn: db.Database, countries: list[str]) -> None:
+    """Ajoute des pays à l'historique des recherches."""
+    known = searched_countries(conn)
+    db.set_setting(conn, HISTORY_KEY, json.dumps(known + [c for c in countries if c not in known]))
+
+
+def effective_profile(conn: db.Database, profile: config.Profile, criteria: SearchCriteria) -> config.Profile:
+    """Profil utilisé pour le score : critères cochés + tous les pays déjà recherchés.
+    Changer les pays d'une nouvelle recherche ne fait donc pas disparaître les offres des recherches précédentes."""
+    return apply_to_profile(profile, criteria, extra_countries=searched_countries(conn))
+
+
+def apply_to_profile(profile: config.Profile, criteria: SearchCriteria,
+                     extra_countries: list[str] | None = None) -> config.Profile:
     """profile.yaml complété par les critères cochés (pays, dates, durées, villes…)."""
-    update: dict = {"target_countries": criteria.countries, "target_cities": criteria.cities,
+    countries = criteria.countries + [c for c in (extra_countries or []) if c not in criteria.countries]
+    update: dict = {"target_countries": countries, "target_cities": criteria.cities,
                     "remote_ok": criteria.remote_ok, "min_stipend_eur": criteria.min_stipend_eur,
                     "exclude_title_words": criteria.exclude_words, "start_months": sorted(criteria.start_months)}
     if criteria.start_months:
