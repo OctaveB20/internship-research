@@ -1,0 +1,7 @@
+model: claude-haiku-5-5
+quota_soft_limit: 180
+date_posted: week
+queries:
+  - {query: "stage contrôle de gestion Paris", country: fr}
+  - {query: "stage FP&A Paris", country: fr}
+  - {query: "finance intern Munich", country: de}

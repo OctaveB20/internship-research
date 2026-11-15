@@ -1,0 +1,12 @@
+# Mon profil : critères de matching utilisés par src/scoring.py (valeurs d'exemple).
+target_countries: [France, Germany]
+target_cities: [Paris]          # bonus si match, pas éliminatoire
+remote_ok: true
+duration_months: {min: 4, max: 6}
+available_from: 2027-01-05
+latest_start: 2027-03-31
+domains: [contrôle de gestion, FP&A, finance d'entreprise]
+skills: [Excel, Python, Power BI, SQL, Streamlit, Copilot Studio]
+languages: {French: native, English: fluent, German: basic}
+min_stipend_eur: null
+weights: {location: 15, duration: 20, start_date: 20, skills: 25, languages: 10, domain: 10}
