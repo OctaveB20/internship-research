@@ -116,3 +116,7 @@ def test_excluded_word_matches_whole_words_only(base):
 def test_dev_mode_unknown_country_returns_nothing(conn, base):
     _, cfg = base
     assert jsearch.search_jobs(conn, "x", "it", cfg, dev=True).jobs == []
+
+
+def test_internship_filter_off_by_default():
+    assert crit.SearchCriteria(titles=["x"], countries=["France"]).internship_only is False

@@ -5,6 +5,7 @@ import io
 from typing import Any
 
 from openpyxl import Workbook
+from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 from openpyxl.styles import Alignment, Font, PatternFill
 
 COLUMNS = [("titre", "Titre", 40), ("entreprise", "Entreprise", 26), ("ville", "Ville", 16), ("pays", "Pays", 12),
@@ -12,6 +13,11 @@ COLUMNS = [("titre", "Titre", 40), ("entreprise", "Entreprise", 26), ("ville", "
            ("gratification", "Gratification (€)", 14), ("score", "Score", 8), ("statut", "Statut", 13),
            ("notes", "Notes", 40), ("raisons", "Éliminée car", 30), ("source", "Source", 16),
            ("publiée", "Publiée le", 12), ("lien", "Lien", 14)]
+
+
+def _clean(value: Any) -> Any:
+    """Retire les caractères de contrôle invisibles (présents dans certaines annonces) refusés par Excel."""
+    return ILLEGAL_CHARACTERS_RE.sub("", value) if isinstance(value, str) else value
 
 
 def offers_to_excel(rows: list[dict[str, Any]]) -> bytes:
@@ -24,7 +30,7 @@ def offers_to_excel(rows: list[dict[str, Any]]) -> bytes:
         cell.font = Font(bold=True, color="FFFFFF")
         cell.fill = PatternFill("solid", fgColor="1F4E78")
     for r in rows:
-        ws.append(["ouvrir" if key == "lien" and r.get(key) else r.get(key) for key, _, _ in COLUMNS])
+        ws.append(["ouvrir" if key == "lien" and r.get(key) else _clean(r.get(key)) for key, _, _ in COLUMNS])
         link = r.get("lien")
         if link:
             cell = ws.cell(row=ws.max_row, column=len(COLUMNS))

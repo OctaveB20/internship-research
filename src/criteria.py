@@ -46,6 +46,7 @@ class SearchCriteria(BaseModel):
     pages: int = Field(1, ge=1, le=3)
     min_stipend_eur: float | None = Field(None, ge=0)
     exclude_words: list[str] = []
+    internship_only: bool = False  # True = seulement les offres marquées « stage » (INTERN) par Google : bien moins d'offres
 
     @field_validator("titles", "cities", "exclude_words")
     @classmethod

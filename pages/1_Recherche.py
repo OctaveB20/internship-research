@@ -17,7 +17,8 @@ months = crit.upcoming_months(date.today(), 15)
 # Streamlit oubliant l'état des cases d'une page quittée).
 defaults = {"crit_titles": ", ".join(saved.titles), "crit_cities": ", ".join(saved.cities),
             "crit_remote": saved.remote_ok, "crit_posted": saved.date_posted, "crit_pages": saved.pages,
-            "crit_stipend": int(saved.min_stipend_eur or 0), "crit_exclude": ", ".join(saved.exclude_words)}
+            "crit_stipend": int(saved.min_stipend_eur or 0), "crit_exclude": ", ".join(saved.exclude_words),
+            "crit_intern_only": saved.internship_only}
 defaults |= {f"c_{n}": n in saved.countries for n in crit.EUROPE}
 defaults |= {f"m_{ym}": ym in saved.start_months for ym in months}
 defaults |= {f"d_{d}": d in saved.durations for d in crit.DURATIONS}
@@ -71,13 +72,17 @@ with st.expander("Autres critères", expanded=False):
     o1.text_input("Villes préférées (bonus)", key="crit_cities", placeholder="Paris, Munich",
                   help="Une offre dans ces villes gagne des points, les autres ne sont pas éliminées.")
     o1.checkbox("J'accepte le full remote", key="crit_remote")
-    o2.selectbox("Offres publiées depuis", list(crit.DATE_POSTED), format_func=crit.DATE_POSTED.get, key="crit_posted")
+    o2.selectbox("Offres publiées depuis", list(crit.DATE_POSTED), format_func=crit.DATE_POSTED.get, key="crit_posted",
+                 help="« 30 derniers jours » ou « toutes » donne beaucoup plus d'offres que « 7 derniers jours ».")
     o2.select_slider("Pages de résultats par requête", [1, 2, 3], key="crit_pages",
                      help="1 page ≈ 10 offres = 1 requête JSearch. 2 pages = 2 fois plus d'offres et de requêtes.")
     o3.number_input("Gratification minimale (€/mois, 0 = indifférent)", 0, 5000, step=100, key="crit_stipend",
                     help="Les offres sous ce montant perdent des points (pas éliminées : souvent non indiqué).")
     o3.text_input("Mots à exclure du titre", key="crit_exclude", placeholder="alternance, CDI, Werkstudent",
                   help="Une offre dont le titre contient un de ces mots est éliminée.")
+    o1.checkbox("Seulement les offres marquées « stage » par Google", key="crit_intern_only",
+                help="Coché : moins d'offres, car beaucoup de stages européens ne sont pas marqués comme tels. "
+                     "Décoché (conseillé) : plus d'offres ; l'IA et le score écartent ensuite les CDI, alternances…")
 
 # ---------- Lecture du formulaire ----------
 ss = st.session_state
@@ -86,6 +91,7 @@ form = dict(
     start_months=[ym for ym in months if ss[f"m_{ym}"]], durations=[d for d in crit.DURATIONS if ss[f"d_{d}"]],
     cities=crit.split_list(ss.crit_cities), remote_ok=ss.crit_remote, date_posted=ss.crit_posted,
     pages=ss.crit_pages, min_stipend_eur=ss.crit_stipend or None, exclude_words=crit.split_list(ss.crit_exclude),
+    internship_only=ss.crit_intern_only,
 )
 problems = [msg for ok, msg in [(form["titles"], "écris au moins un intitulé"),
                                 (form["countries"], "coche au moins un pays")] if not ok]
@@ -131,7 +137,8 @@ if (save_only or launch) and current:
         st.toast(f"Critères enregistrés, {scoring.score_all(conn, profile)} offre(s) rescorée(s).")
 
 if launch and current:
-    run_cfg = cfg.model_copy(update={"date_posted": current.date_posted})
+    run_cfg = cfg.model_copy(update={"date_posted": current.date_posted,
+                                     "employment_types": "INTERN" if current.internship_only else ""})
     with st.status("Recherche en cours…", expanded=True) as status:
         status.write("1/3 · Collecte des offres")
         col = jsearch.collect(conn, crit.build_queries(current), run_cfg)
@@ -139,6 +146,14 @@ if launch and current:
             st.error(err)
         status.write(f"{col.fetched} offres reçues, {col.new} nouvelles "
                      f"({col.api_calls} appel(s) JSearch, {col.cache_hits} depuis le cache).")
+        if col.per_query:
+            st.dataframe(pd.DataFrame(col.per_query), hide_index=True, width="stretch")
+        if col.fetched and not col.new:
+            st.info("Toutes ces offres étaient déjà en base. Pour en trouver d'autres : élargis la période de "
+                    "publication, ajoute des pages, d'autres pays ou des intitulés dans la langue du pays.")
+        elif not col.fetched and not col.errors:
+            st.info("JSearch n'a renvoyé aucune offre. Décoche « Seulement les offres marquées stage », passe à "
+                    "« 30 derniers jours » et essaie des intitulés plus courts ou dans la langue du pays.")
 
         status.write("2/3 · Extraction IA des nouvelles offres")
         bar = st.progress(0.0)

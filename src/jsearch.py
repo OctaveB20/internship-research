@@ -50,18 +50,16 @@ class CollectSummary:
     api_calls: int = 0  # requêtes réellement envoyées (y compris en erreur)
     cache_hits: int = 0
     errors: list[str] = field(default_factory=list)
+    per_query: list[dict[str, Any]] = field(default_factory=list)  # détail : intitulé, pays, page, offres, source
 
 
 # ---------- Paramètres et cache ----------
 def build_params(query: str, country: str, date_posted: str = "week", employment_types: str = "INTERN",
                  cursor: str | None = None) -> dict[str, str]:
     """Paramètres GET de /search-v2 (1 page par appel = 1 requête de quota)."""
-    params = {
-        "query": query,
-        "country": country.lower(),
-        "date_posted": date_posted,
-        "employment_types": employment_types,
-    }
+    params = {"query": query, "country": country.lower(), "date_posted": date_posted}
+    if employment_types:  # vide = pas de filtre (beaucoup d'offres de stage ne sont pas marquées INTERN)
+        params["employment_types"] = employment_types
     if cursor:
         params["cursor"] = cursor
     return params
@@ -250,9 +248,13 @@ def collect(conn: db.Database, queries: list[config.SearchQuery], cfg: config.Ap
                 cursors[key] = None
                 continue
             cursors[key] = res.next_cursor
+            new = db.upsert_jobs(conn, res.jobs)
             summary.cache_hits += res.source == "cache"
             summary.fetched += len(res.jobs)
-            summary.new += db.upsert_jobs(conn, res.jobs)
+            summary.new += new
+            summary.per_query.append({"intitulé": q.query, "pays": q.country.upper(), "page": q.page,
+                                      "offres": len(res.jobs), "nouvelles": new,
+                                      "source": {"api": "JSearch", "cache": "cache du jour"}.get(res.source, "fixtures")})
     finally:
         summary.api_calls = db.get_api_usage(conn) - usage_before
     return summary

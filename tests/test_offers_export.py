@@ -48,3 +48,9 @@ def test_excel_export(conn):
     assert values["Statut"] == "postulé" and values["Notes"] == "relance le 20/11"
     assert ws.cell(row=2, column=len(header)).hyperlink.target.startswith("https://")
     assert ws.freeze_panes == "A2"
+
+
+def test_excel_export_strips_control_characters():
+    rows = [{"titre": "Stage\x0b contrôle\x00 de gestion", "notes": "ok\x1f", "lien": "https://x"}]
+    ws = load_workbook(io.BytesIO(export.offers_to_excel(rows)))["Offres"]
+    assert ws.cell(row=2, column=1).value == "Stage contrôle de gestion"

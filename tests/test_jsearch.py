@@ -267,3 +267,13 @@ def test_http_error_shows_api_message_and_counts_call(conn, cfg, tmp_path, fake_
                         cache_dir=tmp_path)
     assert "HTTP 404 : Endpoint '/search' does not exist" in s.errors[0]
     assert s.api_calls == 1
+
+
+def test_no_employment_filter_when_empty():
+    assert "employment_types" not in jsearch.build_params("x", "fr", employment_types="")
+
+
+def test_collect_reports_each_query(conn, cfg):
+    s = jsearch.collect(conn, DEV_QUERIES, cfg, dev=True)
+    assert [(q["pays"], q["offres"]) for q in s.per_query] == [("FR", 10), ("FR", 10), ("DE", 10)]
+    assert sum(q["nouvelles"] for q in s.per_query) == 20
