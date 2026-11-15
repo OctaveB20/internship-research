@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 from datetime import date
 from pathlib import Path
+from typing import Literal
 
 import yaml
 from dotenv import load_dotenv
@@ -64,7 +65,9 @@ class SearchQuery(BaseModel):
 class AppConfig(BaseModel):
     model: str = "claude-haiku-5-5"
     quota_soft_limit: int = Field(180, ge=0, le=200)
-    date_posted: str = "week"
+    date_posted: Literal["all", "today", "3days", "week", "month"] = "week"
+    employment_types: str = "INTERN"
+    request_timeout_s: float = 30
     queries: list[SearchQuery] = []
 
 

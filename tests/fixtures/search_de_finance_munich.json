@@ -1,0 +1,426 @@
+{
+  "status": "OK",
+  "request_id": "fixture-de-0001",
+  "parameters": {
+    "query": "finance intern munich",
+    "page": 1,
+    "num_pages": 1,
+    "date_posted": "week",
+    "country": "de",
+    "employment_types": [
+      "INTERN"
+    ],
+    "language": null
+  },
+  "data": [
+    {
+      "job_id": "ZGUtYnJlbm53YWxkLWN0cm==",
+      "job_title": "Praktikant (m/w/d) Controlling",
+      "employer_name": "Brennwald AG",
+      "employer_logo": null,
+      "employer_website": null,
+      "job_publisher": "LinkedIn",
+      "job_employment_type": "INTERN",
+      "job_employment_types": [
+        "INTERN"
+      ],
+      "job_apply_link": "https://jobs.example.com/de-brennwald-ctrl",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "LinkedIn",
+          "apply_link": "https://jobs.example.com/de-brennwald-ctrl",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Die Brennwald AG ist ein international tätiger Hersteller von Antriebstechnik mit Sitz in München.\n\nDeine Aufgaben:\n- Unterstützung bei Monats- und Quartalsabschlüssen\n- Erstellung von Abweichungsanalysen und Management-Reportings\n- Mitarbeit an der Budgetplanung 2027\n\nDein Profil:\n- Studium der Wirtschaftswissenschaften (Master), Pflichtpraktikum\n- Sehr gute Excel-Kenntnisse, SAP-Kenntnisse wünschenswert\n- Fließende Deutsch- und gute Englischkenntnisse\n\nDauer: 6 Monate ab Januar 2027. Vergütung: 1.800 € brutto monatlich. Hybrides Arbeiten möglich.",
+      "job_is_remote": false,
+      "job_posted_at": null,
+      "job_posted_at_timestamp": 1794385800,
+      "job_location": "München, DE",
+      "job_city": "München",
+      "job_state": "Bayern",
+      "job_country": "DE",
+      "job_latitude": null,
+      "job_longitude": null,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&ibp=htl;jobs#htidocid=ZGUtYnJlbm53YWxkLWN0cm==",
+      "job_salary": null,
+      "job_min_salary": 1800,
+      "job_max_salary": 1800,
+      "job_salary_period": "MONTH",
+      "job_highlights": {},
+      "job_onet_soc": "13201100",
+      "job_onet_job_zone": "4",
+      "job_posted_at_datetime_utc": "2026-11-11T08:30:00.000Z"
+    },
+    {
+      "job_id": "ZGUtaGVsaXgtZnBh==",
+      "job_title": "Finance Intern FP&A (f/m/d)",
+      "employer_name": "Helix Mobility GmbH",
+      "employer_logo": null,
+      "employer_website": null,
+      "job_publisher": "LinkedIn",
+      "job_employment_type": "INTERN",
+      "job_employment_types": [
+        "INTERN"
+      ],
+      "job_apply_link": "https://jobs.example.com/de-helix-fpa",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "LinkedIn",
+          "apply_link": "https://jobs.example.com/de-helix-fpa",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Helix Mobility builds charging infrastructure for electric fleets across Europe. Join our FP&A team in Munich!\n\nYour tasks:\n- Support monthly business reviews and rolling forecasts\n- Build dashboards in Power BI\n- Analyse unit economics of our charging hubs\n\nYour profile:\n- Enrolled student in finance, economics or business\n- Strong Excel skills, Power BI; SQL is nice to have\n- Fluent English; German is a plus but not required\n\n5–6 months starting March 2027. €1,700 gross per month. Hybrid (2 days home office per week).",
+      "job_is_remote": false,
+      "job_posted_at": null,
+      "job_posted_at_timestamp": 1794564300,
+      "job_location": "München, DE",
+      "job_city": "München",
+      "job_state": "Bayern",
+      "job_country": "DE",
+      "job_latitude": null,
+      "job_longitude": null,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&ibp=htl;jobs#htidocid=ZGUtaGVsaXgtZnBh==",
+      "job_salary": null,
+      "job_min_salary": 1700,
+      "job_max_salary": 1700,
+      "job_salary_period": "MONTH",
+      "job_highlights": {},
+      "job_onet_soc": "13201100",
+      "job_onet_job_zone": "4",
+      "job_posted_at_datetime_utc": "2026-11-13T10:05:00.000Z"
+    },
+    {
+      "job_id": "ZGUtaXNhcndlcmstd3M===",
+      "job_title": "Werkstudent (m/w/d) Finance & Accounting",
+      "employer_name": "Isarwerk Energie",
+      "employer_logo": null,
+      "employer_website": null,
+      "job_publisher": "StepStone",
+      "job_employment_type": "PARTTIME",
+      "job_employment_types": [
+        "PARTTIME"
+      ],
+      "job_apply_link": "https://jobs.example.com/de-isarwerk-ws",
+      "job_apply_is_direct": true,
+      "apply_options": [
+        {
+          "publisher": "StepStone",
+          "apply_link": "https://jobs.example.com/de-isarwerk-ws",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Für unser Finanzteam suchen wir ab sofort einen Werkstudenten (m/w/d) für 16–20 Stunden pro Woche, unbefristet.\n\nAufgaben: Kreditorenbuchhaltung, Kontenabstimmungen, Unterstützung beim Monatsabschluss.\nProfil: immatrikulierter Student, gute MS-Office-Kenntnisse, sehr gute Deutschkenntnisse.\nVergütung: 17 € pro Stunde.",
+      "job_is_remote": false,
+      "job_posted_at": null,
+      "job_posted_at_timestamp": 1794484800,
+      "job_location": "München, DE",
+      "job_city": "München",
+      "job_state": "Bayern",
+      "job_country": "DE",
+      "job_latitude": null,
+      "job_longitude": null,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&ibp=htl;jobs#htidocid=ZGUtaXNhcndlcmstd3M===",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "13201100",
+      "job_onet_job_zone": "4",
+      "job_posted_at_datetime_utc": "2026-11-12T12:00:00.000Z"
+    },
+    {
+      "job_id": "ZGUta2FsdGVuYmVyZy1mYQ==",
+      "job_title": "Senior Financial Analyst (m/w/d) – Festanstellung",
+      "employer_name": "Kaltenberg Logistics",
+      "employer_logo": null,
+      "employer_website": null,
+      "job_publisher": "StepStone",
+      "job_employment_type": "FULLTIME",
+      "job_employment_types": [
+        "FULLTIME"
+      ],
+      "job_apply_link": "https://jobs.example.com/de-kaltenberg-fa",
+      "job_apply_is_direct": true,
+      "apply_options": [
+        {
+          "publisher": "StepStone",
+          "apply_link": "https://jobs.example.com/de-kaltenberg-fa",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Wir suchen zum nächstmöglichen Zeitpunkt einen Senior Financial Analyst in unbefristeter Festanstellung.\n\nAufgaben: Konzernreporting, Business Partnering mit den Ländergesellschaften, Weiterentwicklung der Planungstools.\nProfil: mindestens 5 Jahre Berufserfahrung im Controlling, SAP S/4HANA, verhandlungssicheres Englisch.\nWir bieten: 30 Urlaubstage, betriebliche Altersvorsorge, attraktives Jahresgehalt.",
+      "job_is_remote": false,
+      "job_posted_at": null,
+      "job_posted_at_timestamp": 1794303900,
+      "job_location": "Frankfurt am Main, DE",
+      "job_city": "Frankfurt am Main",
+      "job_state": "Hessen",
+      "job_country": "DE",
+      "job_latitude": null,
+      "job_longitude": null,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&ibp=htl;jobs#htidocid=ZGUta2FsdGVuYmVyZy1mYQ==",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "13201100",
+      "job_onet_job_zone": "4",
+      "job_posted_at_datetime_utc": "2026-11-10T09:45:00.000Z"
+    },
+    {
+      "job_id": "ZGUtdGVnZXJuc2VlLW1h==",
+      "job_title": "M&A Internship (3 months)",
+      "employer_name": "Tegernsee Capital",
+      "employer_logo": null,
+      "employer_website": null,
+      "job_publisher": "LinkedIn",
+      "job_employment_type": "INTERN",
+      "job_employment_types": [
+        "INTERN"
+      ],
+      "job_apply_link": "https://jobs.example.com/de-tegernsee-ma",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "LinkedIn",
+          "apply_link": "https://jobs.example.com/de-tegernsee-ma",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Tegernsee Capital is a boutique M&A advisory firm focused on the DACH mid-market.\n\nAs an intern you will support deal teams on live transactions: company valuations, financial modelling in Excel, preparation of pitch books in PowerPoint, market research.\n\nRequirements: excellent academic record, strong Excel and PowerPoint skills, fluent English and German.\nDuration: 3 months, starting April 2027. Competitive remuneration.",
+      "job_is_remote": false,
+      "job_posted_at": null,
+      "job_posted_at_timestamp": 1794655800,
+      "job_location": "München, DE",
+      "job_city": "München",
+      "job_state": "Bayern",
+      "job_country": "DE",
+      "job_latitude": null,
+      "job_longitude": null,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&ibp=htl;jobs#htidocid=ZGUtdGVnZXJuc2VlLW1h==",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "13201100",
+      "job_onet_job_zone": "4",
+      "job_posted_at_datetime_utc": "2026-11-14T11:30:00.000Z"
+    },
+    {
+      "job_id": "ZGUtcmhlaW5mZWxzLXRyZW==",
+      "job_title": "Praktikum Treasury (m/w/d)",
+      "employer_name": "Rheinfels Bank",
+      "employer_logo": null,
+      "employer_website": null,
+      "job_publisher": "LinkedIn",
+      "job_employment_type": "INTERN",
+      "job_employment_types": [
+        "INTERN"
+      ],
+      "job_apply_link": "https://jobs.example.com/de-rheinfels-treasury",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "LinkedIn",
+          "apply_link": "https://jobs.example.com/de-rheinfels-treasury",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Im Bereich Group Treasury erwarten dich spannende Aufgaben:\n- Liquiditätsplanung und -steuerung\n- Erstellung von Auswertungen mit Excel/VBA\n- Mitarbeit in Projekten zur Automatisierung von Reports\n\nProfil: Studium mit Schwerpunkt Finanzen, sehr gute Excel-Kenntnisse (VBA von Vorteil), verhandlungssicheres Englisch.\nBeginn: 01.02.2027, Dauer: 6 Monate.",
+      "job_is_remote": false,
+      "job_posted_at": null,
+      "job_posted_at_timestamp": 1794237300,
+      "job_location": "Frankfurt am Main, DE",
+      "job_city": "Frankfurt am Main",
+      "job_state": "Hessen",
+      "job_country": "DE",
+      "job_latitude": null,
+      "job_longitude": null,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&ibp=htl;jobs#htidocid=ZGUtcmhlaW5mZWxzLXRyZW==",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "13201100",
+      "job_onet_job_zone": "4",
+      "job_posted_at_datetime_utc": "2026-11-09T15:15:00.000Z"
+    },
+    {
+      "job_id": "ZGUtYXVicmFjLWNn==",
+      "job_title": "Stage contrôle de gestion – filiale allemande (H/F)",
+      "employer_name": "Aubrac Systems",
+      "employer_logo": null,
+      "employer_website": null,
+      "job_publisher": "LinkedIn",
+      "job_employment_type": "INTERN",
+      "job_employment_types": [
+        "INTERN"
+      ],
+      "job_apply_link": "https://jobs.example.com/de-aubrac-cg",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "LinkedIn",
+          "apply_link": "https://jobs.example.com/de-aubrac-cg",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Aubrac Systems, groupe français d'équipements ferroviaires, recherche un(e) stagiaire en contrôle de gestion pour sa filiale de Munich.\n\nMissions : reporting mensuel vers le siège, suivi des projets clients (marges, avancement), préparation du budget.\nProfil : école de commerce, Excel avancé, Power BI apprécié. Français et anglais courants ; l'allemand est un plus (niveau B1 minimum souhaité).\n\nStage de 6 mois à partir de janvier 2027, possible en VIE à l'issue. Gratification : 1 500 € par mois + aide au logement.",
+      "job_is_remote": false,
+      "job_posted_at": null,
+      "job_posted_at_timestamp": 1794471600,
+      "job_location": "München, DE",
+      "job_city": "München",
+      "job_state": "Bayern",
+      "job_country": "DE",
+      "job_latitude": null,
+      "job_longitude": null,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&ibp=htl;jobs#htidocid=ZGUtYXVicmFjLWNn==",
+      "job_salary": null,
+      "job_min_salary": 1500,
+      "job_max_salary": 1500,
+      "job_salary_period": "MONTH",
+      "job_highlights": {},
+      "job_onet_soc": "13201100",
+      "job_onet_job_zone": "4",
+      "job_posted_at_datetime_utc": "2026-11-12T08:20:00.000Z"
+    },
+    {
+      "job_id": "ZGUtZGF0YWZpbi1yZW1vdG==",
+      "job_title": "Remote Finance Intern (Data & Analytics)",
+      "employer_name": "DataFin Analytics",
+      "employer_logo": null,
+      "employer_website": null,
+      "job_publisher": "Glassdoor",
+      "job_employment_type": "INTERN",
+      "job_employment_types": [
+        "INTERN"
+      ],
+      "job_apply_link": "https://jobs.example.com/de-datafin-remote",
+      "job_apply_is_direct": true,
+      "apply_options": [
+        {
+          "publisher": "Glassdoor",
+          "apply_link": "https://jobs.example.com/de-datafin-remote",
+          "is_direct": false
+        }
+      ],
+      "job_description": "DataFin Analytics is a fully remote start-up providing financial benchmarking for SaaS companies.\n\nWe are looking for a finance intern for 4 to 6 months, flexible start date.\nYou will: clean and analyse financial datasets with Python and SQL, write short research notes, help build our Streamlit demo app.\nRequirements: Python, SQL, Excel; fluent English. EU residency required.",
+      "job_is_remote": true,
+      "job_posted_at": null,
+      "job_posted_at_timestamp": 1794592200,
+      "job_location": "DE",
+      "job_city": null,
+      "job_state": null,
+      "job_country": "DE",
+      "job_latitude": null,
+      "job_longitude": null,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&ibp=htl;jobs#htidocid=ZGUtZGF0YWZpbi1yZW1vdG==",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "13201100",
+      "job_onet_job_zone": "4"
+    },
+    {
+      "job_id": "ZGUtYWxwZW5ibGljay1hY2==",
+      "job_title": "Pflichtpraktikum Accounting (m/w/d)",
+      "employer_name": "Alpenblick Hotels",
+      "employer_logo": null,
+      "employer_website": null,
+      "job_publisher": "Indeed",
+      "job_employment_type": "INTERN",
+      "job_employment_types": [
+        "INTERN"
+      ],
+      "job_apply_link": "https://jobs.example.com/de-alpenblick-acc",
+      "job_apply_is_direct": true,
+      "apply_options": [
+        {
+          "publisher": "Indeed",
+          "apply_link": "https://jobs.example.com/de-alpenblick-acc",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Für unsere Hotelgruppe suchen wir ab Oktober 2027 eine/n Praktikant/in im Accounting für 6 Monate.\n\nAufgaben: Unterstützung der Buchhaltung, Rechnungsprüfung, Vorbereitung des Jahresabschlusses.\nProfil: Pflichtpraktikum im Rahmen des Studiums, gute Deutsch- und Englischkenntnisse, MS Excel.\nVergütung: 1.200 € brutto, Unterkunft im Mitarbeiterhaus möglich.",
+      "job_is_remote": false,
+      "job_posted_at": null,
+      "job_posted_at_timestamp": 1794319200,
+      "job_location": "Garmisch-Partenkirchen, DE",
+      "job_city": "Garmisch-Partenkirchen",
+      "job_state": "Bayern",
+      "job_country": "DE",
+      "job_latitude": null,
+      "job_longitude": null,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&ibp=htl;jobs#htidocid=ZGUtYWxwZW5ibGljay1hY2==",
+      "job_salary": null,
+      "job_min_salary": 1200,
+      "job_max_salary": 1200,
+      "job_salary_period": "MONTH",
+      "job_highlights": {},
+      "job_onet_soc": "13201100",
+      "job_onet_job_zone": "4",
+      "job_posted_at_datetime_utc": "2026-11-10T14:00:00.000Z"
+    },
+    {
+      "job_id": "ZGUtZG9uYXVzdGFobC13aW==",
+      "job_title": "Praktikum Business Controlling",
+      "employer_name": "Donaustahl GmbH",
+      "employer_logo": null,
+      "employer_website": null,
+      "job_publisher": "LinkedIn",
+      "job_employment_type": "INTERN",
+      "job_employment_types": [
+        "INTERN"
+      ],
+      "job_apply_link": "https://jobs.example.com/de-donaustahl-wien",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "LinkedIn",
+          "apply_link": "https://jobs.example.com/de-donaustahl-wien",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Die Donaustahl GmbH sucht für ihr Business Controlling in Wien eine/n Praktikant/in für 6 Monate ab Februar 2027.\n\nAufgaben: Analyse von Kosten und Deckungsbeiträgen, Unterstützung bei der Forecast-Erstellung, Ad-hoc-Analysen.\nProfil: Wirtschaftsstudium, sehr gute Excel-Kenntnisse, Power BI von Vorteil, Deutsch und Englisch fließend.\nDas Mindestentgelt beträgt 1.650 € brutto pro Monat (14x jährlich).",
+      "job_is_remote": false,
+      "job_posted_at": null,
+      "job_posted_at_timestamp": 1794415200,
+      "job_location": "Wien, AT",
+      "job_city": "Wien",
+      "job_state": "Wien",
+      "job_country": "AT",
+      "job_latitude": null,
+      "job_longitude": null,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&ibp=htl;jobs#htidocid=ZGUtZG9uYXVzdGFobC13aW==",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "13201100",
+      "job_onet_job_zone": "4",
+      "job_posted_at_datetime_utc": "2026-11-11T16:40:00.000Z"
+    }
+  ]
+}

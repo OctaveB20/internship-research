@@ -1,0 +1,427 @@
+{
+  "status": "OK",
+  "request_id": "fixture-fr-0001",
+  "parameters": {
+    "query": "stage contrôle de gestion paris",
+    "page": 1,
+    "num_pages": 1,
+    "date_posted": "week",
+    "country": "fr",
+    "employment_types": [
+      "INTERN"
+    ],
+    "language": null
+  },
+  "data": [
+    {
+      "job_id": "ZnItYWx0YWlyLWNnLWxp==",
+      "job_title": "Stage Contrôle de gestion (H/F)",
+      "employer_name": "Groupe Altaïr",
+      "employer_logo": null,
+      "employer_website": null,
+      "job_publisher": "LinkedIn",
+      "job_employment_type": "INTERN",
+      "job_employment_types": [
+        "INTERN"
+      ],
+      "job_apply_link": "https://jobs.example.com/fr-altair-cg-li",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "LinkedIn",
+          "apply_link": "https://jobs.example.com/fr-altair-cg-li",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Groupe Altaïr, acteur européen de la distribution B2B (4 200 collaborateurs), recherche un(e) stagiaire en contrôle de gestion pour sa direction financière au siège parisien.\n\nMissions :\n- Participer aux clôtures mensuelles et à l'analyse des écarts budget / réel\n- Construire les reportings mensuels à destination du comité de direction\n- Contribuer au processus budgétaire 2027 et aux reprévisions\n- Automatiser des tableaux de bord sous Power BI\n\nProfil :\n- Formation Bac+5 (école de commerce ou master CCA / finance)\n- Maîtrise d'Excel (TCD, RECHERCHEX) ; une connaissance de SAP est un plus\n- Anglais courant (échanges réguliers avec les filiales)\n\nConditions : stage de 6 mois à partir de janvier 2027, convention de stage obligatoire. Gratification : 1 400 € bruts par mois + tickets restaurant. Poste basé à Paris 8e, 1 jour de télétravail par semaine.",
+      "job_is_remote": false,
+      "job_posted_at": null,
+      "job_posted_at_timestamp": 1794474840,
+      "job_location": "Paris, FR",
+      "job_city": "Paris",
+      "job_state": "Île-de-France",
+      "job_country": "FR",
+      "job_latitude": null,
+      "job_longitude": null,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&ibp=htl;jobs#htidocid=ZnItYWx0YWlyLWNnLWxp==",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "13201100",
+      "job_onet_job_zone": "4",
+      "job_posted_at_datetime_utc": "2026-11-12T09:14:00.000Z"
+    },
+    {
+      "job_id": "ZnItYWx0YWlyLWNnLWlu==",
+      "job_title": "Stagiaire Contrôle de Gestion H/F",
+      "employer_name": "Altaïr Groupe",
+      "employer_logo": null,
+      "employer_website": null,
+      "job_publisher": "Indeed",
+      "job_employment_type": "INTERN",
+      "job_employment_types": [
+        "INTERN"
+      ],
+      "job_apply_link": "https://jobs.example.com/fr-altair-cg-in",
+      "job_apply_is_direct": true,
+      "apply_options": [
+        {
+          "publisher": "Indeed",
+          "apply_link": "https://jobs.example.com/fr-altair-cg-in",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Groupe Altaïr, acteur européen de la distribution B2B (4 200 collaborateurs), recherche un(e) stagiaire en contrôle de gestion pour sa direction financière au siège parisien.\n\nMissions :\n- Participer aux clôtures mensuelles et à l'analyse des écarts budget / réel\n- Construire les reportings mensuels à destination du comité de direction\n- Contribuer au processus budgétaire 2027 et aux reprévisions\n- Automatiser des tableaux de bord sous Power BI\n\nProfil :\n- Formation Bac+5 (école de commerce ou master CCA / finance)\n- Maîtrise d'Excel (TCD, RECHERCHEX) ; une connaissance de SAP est un plus\n- Anglais courant (échanges réguliers avec les filiales)\n\nConditions : stage de 6 mois à partir de janvier 2027, convention de stage obligatoire. Gratification : 1 400 € bruts par mois + tickets restaurant. Poste basé à Paris 8e, 1 jour de télétravail par semaine.",
+      "job_is_remote": false,
+      "job_posted_at": null,
+      "job_posted_at_timestamp": 1794477720,
+      "job_location": "Paris, FR",
+      "job_city": "Paris",
+      "job_state": "Île-de-France",
+      "job_country": "FR",
+      "job_latitude": null,
+      "job_longitude": null,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&ibp=htl;jobs#htidocid=ZnItYWx0YWlyLWNnLWlu==",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "13201100",
+      "job_onet_job_zone": "4",
+      "job_posted_at_datetime_utc": "2026-11-12T10:02:00.000Z"
+    },
+    {
+      "job_id": "ZnItbHVtZW4tZnBh==",
+      "job_title": "FP&A Intern – 6 months",
+      "employer_name": "Lumen Capital Partners",
+      "employer_logo": null,
+      "employer_website": null,
+      "job_publisher": "LinkedIn",
+      "job_employment_type": "INTERN",
+      "job_employment_types": [
+        "INTERN"
+      ],
+      "job_apply_link": "https://jobs.example.com/fr-lumen-fpa",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "LinkedIn",
+          "apply_link": "https://jobs.example.com/fr-lumen-fpa",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Lumen Capital Partners is a mid-cap private equity firm. Our portfolio finance team is looking for an FP&A intern.\n\nWhat you will do:\n- Support the monthly forecast and budget of portfolio companies\n- Build and maintain financial models in Excel\n- Prepare KPI dashboards for the investment committee\n\nWhat we are looking for:\n- Master's student in finance or business school (final year)\n- Advanced Excel; Python or SQL is a plus\n- Fluent English is required; French is a plus\n\nDuration: 6 months, starting February 2027. Stipend: €1,600 gross per month. Hybrid: 3 days in our Paris office, 2 days remote. Internship agreement (convention de stage) required.",
+      "job_is_remote": false,
+      "job_posted_at": null,
+      "job_posted_at_timestamp": 1794584400,
+      "job_location": "Paris, FR",
+      "job_city": "Paris",
+      "job_state": "Île-de-France",
+      "job_country": "FR",
+      "job_latitude": null,
+      "job_longitude": null,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&ibp=htl;jobs#htidocid=ZnItbHVtZW4tZnBh==",
+      "job_salary": null,
+      "job_min_salary": 1600,
+      "job_max_salary": 1600,
+      "job_salary_period": "MONTH",
+      "job_highlights": {},
+      "job_onet_soc": "13201100",
+      "job_onet_job_zone": "4",
+      "job_posted_at_datetime_utc": "2026-11-13T15:40:00.000Z"
+    },
+    {
+      "job_id": "ZnItb3Jpb24tYWY===",
+      "job_title": "Stage Analyste Financier – Direction Financière",
+      "employer_name": "Banque Orion",
+      "employer_logo": null,
+      "employer_website": null,
+      "job_publisher": "Welcome to the Jungle",
+      "job_employment_type": "INTERN",
+      "job_employment_types": [
+        "INTERN"
+      ],
+      "job_apply_link": "https://jobs.example.com/fr-orion-af",
+      "job_apply_is_direct": true,
+      "apply_options": [
+        {
+          "publisher": "Welcome to the Jungle",
+          "apply_link": "https://jobs.example.com/fr-orion-af",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Rattaché(e) au responsable de la planification financière, vous participerez à :\n- l'élaboration des prévisions de résultat et de liquidité ;\n- la préparation des supports pour la direction générale ;\n- l'amélioration des outils de suivi (Excel, VBA).\n\nProfil recherché : étudiant(e) en Master finance, à l'aise avec Excel et VBA, rigoureux(se). Un bon niveau d'anglais est apprécié.\n\nStage de 4 à 6 mois, à pourvoir en mars 2027, sur notre site de La Défense.",
+      "job_is_remote": false,
+      "job_posted_at": null,
+      "job_posted_at_timestamp": 1794297600,
+      "job_location": "Puteaux, FR",
+      "job_city": "Puteaux",
+      "job_state": "Île-de-France",
+      "job_country": "FR",
+      "job_latitude": null,
+      "job_longitude": null,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&ibp=htl;jobs#htidocid=ZnItb3Jpb24tYWY===",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "13201100",
+      "job_onet_job_zone": "4",
+      "job_posted_at_datetime_utc": "2026-11-10T08:00:00.000Z"
+    },
+    {
+      "job_id": "ZnItdmVyZGFuZS1jZGk===",
+      "job_title": "Contrôleur de gestion junior (H/F) – CDI",
+      "employer_name": "Verdane Industries",
+      "employer_logo": null,
+      "employer_website": null,
+      "job_publisher": "Indeed",
+      "job_employment_type": "FULLTIME",
+      "job_employment_types": [
+        "FULLTIME"
+      ],
+      "job_apply_link": "https://jobs.example.com/fr-verdane-cdi",
+      "job_apply_is_direct": true,
+      "apply_options": [
+        {
+          "publisher": "Indeed",
+          "apply_link": "https://jobs.example.com/fr-verdane-cdi",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Dans le cadre de notre croissance, nous recrutons en CDI un contrôleur de gestion junior.\n\nVos missions : clôtures mensuelles, suivi des coûts de production, budget, reporting groupe sous SAP BO.\nProfil : Bac+5, première expérience de 1 à 2 ans en contrôle de gestion (stages ou alternance compris). Excel avancé, SAP.\nRémunération : 42 à 45 k€ bruts annuels selon profil. Poste à pourvoir dès que possible.",
+      "job_is_remote": false,
+      "job_posted_at": null,
+      "job_posted_at_timestamp": 1794396000,
+      "job_location": "Paris, FR",
+      "job_city": "Paris",
+      "job_state": "Île-de-France",
+      "job_country": "FR",
+      "job_latitude": null,
+      "job_longitude": null,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&ibp=htl;jobs#htidocid=ZnItdmVyZGFuZS1jZGk===",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "13201100",
+      "job_onet_job_zone": "4",
+      "job_posted_at_datetime_utc": "2026-11-11T11:20:00.000Z"
+    },
+    {
+      "job_id": "ZnItY2VsZXN0ZS1hbHQ===",
+      "job_title": "Contrôle de gestion – Alternance 12 mois",
+      "employer_name": "Maison Céleste",
+      "employer_logo": null,
+      "employer_website": null,
+      "job_publisher": "LinkedIn",
+      "job_employment_type": "INTERN",
+      "job_employment_types": [
+        "INTERN"
+      ],
+      "job_apply_link": "https://jobs.example.com/fr-celeste-alt",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "LinkedIn",
+          "apply_link": "https://jobs.example.com/fr-celeste-alt",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Maison Céleste, maison de cosmétiques premium, recrute un(e) alternant(e) en contrôle de gestion pour la rentrée.\n\nContrat d'apprentissage de 12 mois, rythme 3 semaines en entreprise / 1 semaine à l'école, à partir de janvier 2027.\nMissions : suivi des ventes par canal, analyse des marges, préparation du budget.\nProfil : étudiant(e) en Master contrôle de gestion, Excel avancé, Power BI apprécié, anglais professionnel.\nRémunération selon la grille légale de l'apprentissage.",
+      "job_is_remote": false,
+      "job_posted_at": null,
+      "job_posted_at_timestamp": 1794234600,
+      "job_location": "Paris, FR",
+      "job_city": "Paris",
+      "job_state": "Île-de-France",
+      "job_country": "FR",
+      "job_latitude": null,
+      "job_longitude": null,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&ibp=htl;jobs#htidocid=ZnItY2VsZXN0ZS1hbHQ===",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "13201100",
+      "job_onet_job_zone": "4",
+      "job_posted_at_datetime_utc": "2026-11-09T14:30:00.000Z"
+    },
+    {
+      "job_id": "ZnItZmVydG9pcy1jZ2k===",
+      "job_title": "Stage Contrôle de gestion industriel H/F",
+      "employer_name": "Fertois Composites",
+      "employer_logo": null,
+      "employer_website": null,
+      "job_publisher": "Welcome to the Jungle",
+      "job_employment_type": "INTERN",
+      "job_employment_types": [
+        "INTERN"
+      ],
+      "job_apply_link": "https://jobs.example.com/fr-fertois-cgi",
+      "job_apply_is_direct": true,
+      "apply_options": [
+        {
+          "publisher": "Welcome to the Jungle",
+          "apply_link": "https://jobs.example.com/fr-fertois-cgi",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Au sein de notre usine de Lyon (350 personnes), vous assisterez le contrôleur de gestion industriel :\n- calcul des prix de revient et suivi des écarts sur coûts standards ;\n- analyse de la performance des lignes de production ;\n- participation à l'inventaire et à la clôture.\n\nProfil : école de commerce ou d'ingénieurs, très bonne maîtrise d'Excel, connaissance de SAP (module CO) appréciée. Déplacements ponctuels sur notre site de Saint-Étienne.\n\nStage de 6 mois à partir d'avril 2027. Gratification selon le minimum légal.",
+      "job_is_remote": false,
+      "job_posted_at": null,
+      "job_posted_at_timestamp": 1794642300,
+      "job_location": "Lyon, FR",
+      "job_city": "Lyon",
+      "job_state": "Auvergne-Rhône-Alpes",
+      "job_country": "FR",
+      "job_latitude": null,
+      "job_longitude": null,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&ibp=htl;jobs#htidocid=ZnItZmVydG9pcy1jZ2k===",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "13201100",
+      "job_onet_job_zone": "4",
+      "job_posted_at_datetime_utc": "2026-11-14T07:45:00.000Z"
+    },
+    {
+      "job_id": "ZnItbWVybGluLWF1ZGl0==",
+      "job_title": "Stage Audit Financier – Septembre 2027",
+      "employer_name": "Merlin & Associés",
+      "employer_logo": null,
+      "employer_website": null,
+      "job_publisher": "LinkedIn",
+      "job_employment_type": "INTERN",
+      "job_employment_types": [
+        "INTERN"
+      ],
+      "job_apply_link": "https://jobs.example.com/fr-merlin-audit",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "LinkedIn",
+          "apply_link": "https://jobs.example.com/fr-merlin-audit",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Cabinet d'audit indépendant (180 collaborateurs), nous recrutons nos stagiaires auditeurs financiers pour la saison 2027-2028.\n\nStage de 6 mois à partir de septembre 2027. Vous participerez aux missions de commissariat aux comptes auprès de PME et ETI : revue des comptes, tests de contrôle interne, rédaction des notes de synthèse.\n\nProfil : Master CCA ou école de commerce, Excel, esprit d'analyse. Anglais lu.\nGratification : 1 500 € bruts mensuels.",
+      "job_is_remote": false,
+      "job_posted_at": null,
+      "job_posted_at_timestamp": 1794560400,
+      "job_location": "Paris, FR",
+      "job_city": "Paris",
+      "job_state": "Île-de-France",
+      "job_country": "FR",
+      "job_latitude": null,
+      "job_longitude": null,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&ibp=htl;jobs#htidocid=ZnItbWVybGluLWF1ZGl0==",
+      "job_salary": null,
+      "job_min_salary": 1500,
+      "job_max_salary": 1500,
+      "job_salary_period": "MONTH",
+      "job_highlights": {},
+      "job_onet_soc": "13201100",
+      "job_onet_job_zone": "4",
+      "job_posted_at_datetime_utc": "2026-11-13T09:00:00.000Z"
+    },
+    {
+      "job_id": "ZnIta2VzdHJlbC1sdXg===",
+      "job_title": "Corporate Finance Internship",
+      "employer_name": "Kestrel Fund Services",
+      "employer_logo": null,
+      "employer_website": null,
+      "job_publisher": "LinkedIn",
+      "job_employment_type": "INTERN",
+      "job_employment_types": [
+        "INTERN"
+      ],
+      "job_apply_link": "https://jobs.example.com/fr-kestrel-lux",
+      "job_apply_is_direct": false,
+      "apply_options": [
+        {
+          "publisher": "LinkedIn",
+          "apply_link": "https://jobs.example.com/fr-kestrel-lux",
+          "is_direct": false
+        }
+      ],
+      "job_description": "Kestrel Fund Services, a fund administration company based in Luxembourg, is hiring a Corporate Finance intern.\n\nResponsibilities: support the preparation of financial statements of investment funds, NAV controls, ad-hoc analyses for the CFO.\nRequirements: Master's degree in finance or accounting (ongoing), excellent Excel skills, fluent English and French; German is an asset.\n\nStart date: January 2027, for 6 months. Monthly allowance: €1,300.",
+      "job_is_remote": false,
+      "job_posted_at": null,
+      "job_posted_at_timestamp": 1794489000,
+      "job_location": "Luxembourg, LU",
+      "job_city": "Luxembourg",
+      "job_state": null,
+      "job_country": "LU",
+      "job_latitude": null,
+      "job_longitude": null,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&ibp=htl;jobs#htidocid=ZnIta2VzdHJlbC1sdXg===",
+      "job_salary": null,
+      "job_min_salary": 1300,
+      "job_max_salary": 1300,
+      "job_salary_period": "MONTH",
+      "job_highlights": {},
+      "job_onet_soc": "13201100",
+      "job_onet_job_zone": "4",
+      "job_posted_at_datetime_utc": "2026-11-12T13:10:00.000Z"
+    },
+    {
+      "job_id": "ZnItbmVvbGVkZ2VyLWJh==",
+      "job_title": "Stage Business Analyst Finance (100 % remote)",
+      "employer_name": "NeoLedger",
+      "employer_logo": null,
+      "employer_website": null,
+      "job_publisher": "Welcome to the Jungle",
+      "job_employment_type": "INTERN",
+      "job_employment_types": [
+        "INTERN"
+      ],
+      "job_apply_link": "https://jobs.example.com/fr-neoledger-ba",
+      "job_apply_is_direct": true,
+      "apply_options": [
+        {
+          "publisher": "Welcome to the Jungle",
+          "apply_link": "https://jobs.example.com/fr-neoledger-ba",
+          "is_direct": false
+        }
+      ],
+      "job_description": "NeoLedger est une fintech qui édite une solution de rapprochement bancaire pour les PME. Équipe 100 % remote.\n\nStage de 2 mois, dès que possible. Missions : analyse des données clients, construction de tableaux de bord sous Metabase, requêtes SQL.\nProfil : Bac+3 minimum, SQL et Excel, curiosité pour la tech. Anglais courant.\nGratification légale.",
+      "job_is_remote": true,
+      "job_posted_at": null,
+      "job_posted_at_timestamp": 1794673500,
+      "job_location": "FR",
+      "job_city": null,
+      "job_state": null,
+      "job_country": "FR",
+      "job_latitude": null,
+      "job_longitude": null,
+      "job_benefits": null,
+      "job_google_link": "https://www.google.com/search?q=jobs&ibp=htl;jobs#htidocid=ZnItbmVvbGVkZ2VyLWJh==",
+      "job_salary": null,
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_period": null,
+      "job_highlights": {},
+      "job_onet_soc": "13201100",
+      "job_onet_job_zone": "4",
+      "job_posted_at_datetime_utc": "2026-11-14T16:25:00.000Z"
+    }
+  ]
+}
