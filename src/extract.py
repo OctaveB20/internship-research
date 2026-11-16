@@ -136,7 +136,18 @@ def build_user_prompt(job: dict[str, Any]) -> str:
     return (f"Titre : {job.get('job_title')}\nEntreprise : {job.get('employer_name')}\n"
             f"Lieu indiqué : {job.get('job_city') or '?'}, {job.get('job_country') or '?'}"
             f"{' (remote)' if job.get('job_is_remote') else ''}\nDate de publication : {posted}\n\n"
-            f"Annonce :\n{job.get('job_description') or ''}")
+            f"Annonce :\n{_description(job)}")
+
+
+MAX_DESCRIPTION_CHARS = 12000  # ≈ 3 000 tokens : les annonces dépassent rarement, et ça protège les limites gratuites
+
+
+def _description(job: dict[str, Any]) -> str:
+    """Annonce complète, coupée seulement si elle est exceptionnellement longue (signalé à l'IA)."""
+    text = job.get("job_description") or ""
+    if len(text) <= MAX_DESCRIPTION_CHARS:
+        return text
+    return text[:MAX_DESCRIPTION_CHARS] + "\n[… annonce tronquée, la suite n'est pas fournie]"
 
 
 def _apply_asap(ex: JobExtraction, job: dict[str, Any]) -> JobExtraction:

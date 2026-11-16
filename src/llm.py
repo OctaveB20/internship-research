@@ -20,6 +20,10 @@ GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:ge
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 RETRY_STATUSES = {429, 500, 502, 503, 504}
 MAX_RETRIES = 3
+RATE_LIMIT_RETRIES = 6  # 429 : on attend le délai indiqué (limites par minute des offres gratuites), plusieurs fois
+MAX_WAIT_S = 90
+# Erreurs Groq quand le modèle produit un JSON / un appel d'outil invalide : on réessaie au lieu d'abandonner.
+INVALID_OUTPUT_CODES = {"json_validate_failed", "tool_use_failed"}
 
 RunTool = Callable[[str, dict[str, Any]], Any]
 
@@ -28,9 +32,10 @@ class LLMError(Exception):
     """Erreur lisible à afficher dans l'UI. `fatal` : inutile de réessayer sur l'offre suivante
     (clé absente ou refusée, modèle inconnu, limite gratuite atteinte)."""
 
-    def __init__(self, message: str, fatal: bool = False):
+    def __init__(self, message: str, fatal: bool = False, code: str = ""):
         super().__init__(message)
         self.fatal = fatal
+        self.code = code  # code d'erreur renvoyé par l'API (ex. json_validate_failed chez Groq)
 
 
 @dataclass
@@ -71,35 +76,48 @@ class LLMClient(Protocol):
 
 # ---------- HTTP commun (Gemini, Groq) ----------
 def _retry_delay(resp: requests.Response, attempt: int) -> float:
-    """Délai d'attente conseillé (Retry-After, ou retryDelay de Gemini), sinon backoff 5/10/20 s."""
+    """Délai d'attente conseillé : en-tête Retry-After, retryDelay (Gemini), « try again in 7.6s » ou
+    « 1m2.5s » (Groq), sinon backoff 5/10/20 s."""
     header = resp.headers.get("Retry-After") if resp.headers else None
     if header and header.replace(".", "", 1).isdigit():
-        return min(float(header), 60)
-    match = re.search(r'"retryDelay":\s*"(\d+(?:\.\d+)?)s"', resp.text or "")
+        return min(float(header) + 0.5, MAX_WAIT_S)
+    text = resp.text or ""
+    match = re.search(r'"retryDelay":\s*"(\d+(?:\.\d+)?)s"', text)
     if match:
-        return min(float(match.group(1)) + 1, 60)
-    return 5 * 2 ** attempt
+        return min(float(match.group(1)) + 1, MAX_WAIT_S)
+    match = re.search(r"try again in (?:(\d+)m)?(\d+(?:\.\d+)?)s", text)
+    if match:
+        return min(int(match.group(1) or 0) * 60 + float(match.group(2)) + 0.5, MAX_WAIT_S)
+    return min(5 * 2 ** attempt, MAX_WAIT_S)
+
+
+def _error_info(resp: requests.Response) -> tuple[str, str]:
+    """(message, code) de l'erreur renvoyée par l'API."""
+    try:
+        err = resp.json().get("error", {})
+    except ValueError:
+        return "", ""
+    if isinstance(err, dict):
+        return str(err.get("message", "")), str(err.get("code") or err.get("type") or "")
+    return str(err), ""
 
 
 def _error_message(resp: requests.Response) -> str:
-    try:
-        err = resp.json().get("error", {})
-        return err.get("message", "") if isinstance(err, dict) else str(err)
-    except ValueError:
-        return ""
+    return _error_info(resp)[0]
 
 
 def _post_json(provider: str, url: str, headers: dict[str, str], body: dict[str, Any], timeout: float,
                sleep: Callable[[float], None] = time.sleep) -> dict[str, Any]:
     """POST avec réessais sur 429/5xx. Lève LLMError lisible (jamais la clé)."""
-    for attempt in range(MAX_RETRIES + 1):
+    for attempt in range(RATE_LIMIT_RETRIES + 1):
         try:
             resp = requests.post(url, headers=headers, json=body, timeout=timeout)
         except requests.Timeout:
             raise LLMError(f"{provider} n'a pas répondu en {timeout:.0f} s.") from None
         except requests.RequestException as e:
             raise LLMError(f"Connexion à {provider} impossible ({type(e).__name__}).") from None
-        if resp.status_code in RETRY_STATUSES and attempt < MAX_RETRIES:
+        retries = RATE_LIMIT_RETRIES if resp.status_code == 429 else MAX_RETRIES
+        if resp.status_code in RETRY_STATUSES and attempt < retries:
             sleep(_retry_delay(resp, attempt))
             continue
         if resp.status_code == 429:
@@ -112,8 +130,9 @@ def _post_json(provider: str, url: str, headers: dict[str, str], body: dict[str,
             raise LLMError(f"Modèle introuvable chez {provider} (404) : vérifie `model` dans config.yaml{hint}.",
                            fatal=True)
         if resp.status_code >= 400:
-            detail = _error_message(resp)
-            raise LLMError(f"{provider} a répondu HTTP {resp.status_code}" + (f" : {detail[:300]}" if detail else "."))
+            detail, code = _error_info(resp)
+            raise LLMError(f"{provider} a répondu HTTP {resp.status_code}" + (f" : {detail[:300]}" if detail else "."),
+                           code=code)
         try:
             return resp.json()
         except ValueError:
@@ -227,6 +246,41 @@ class GeminiClient:
 
 
 # ---------- Groq (API compatible OpenAI) ----------
+def to_simple_schema(schema: dict[str, Any]) -> dict[str, Any]:
+    """JSON Schema sans « null » (types multiples, enum avec None), mieux accepté par les API compatibles OpenAI."""
+    out = {k: v for k, v in schema.items() if k not in ("type", "enum", "properties", "items")}
+    typ = schema.get("type")
+    if isinstance(typ, list):
+        typ = next((t for t in typ if t != "null"), "string")
+    if typ:
+        out["type"] = typ
+    if "enum" in schema:
+        out["enum"] = [e for e in schema["enum"] if e is not None]
+    if "properties" in schema:
+        out["properties"] = {k: to_simple_schema(v) for k, v in schema["properties"].items()}
+    if "items" in schema:
+        out["items"] = to_simple_schema(schema["items"])
+    return out
+
+
+def describe_schema(schema: dict[str, Any]) -> str:
+    """Consigne compacte : une ligne par champ attendu (nom, type, description)."""
+    lines = ["Réponds uniquement avec un objet JSON contenant exactement ces clés (null si l'information est absente) :"]
+    for name, prop in schema.get("properties", {}).items():
+        typ = prop.get("type")
+        typ = "|".join(typ) if isinstance(typ, list) else typ
+        if prop.get("enum"):
+            typ = " | ".join(f'"{e}"' for e in prop["enum"] if e is not None)
+        if typ == "array" and prop.get("items", {}).get("type") == "object":
+            keys = ", ".join(prop["items"].get("properties", {}))
+            typ = f"liste d'objets {{{keys}}}"
+        elif typ == "array":
+            typ = "liste de textes"
+        lines.append(f"- {name} ({typ}) : {prop.get('description', '')}".rstrip(" :"))
+    return "\n".join(lines)
+
+
+# ---------- Client Groq ----------
 class GroqClient:
     provider = "Groq"
 
@@ -244,23 +298,35 @@ class GroqClient:
 
     @staticmethod
     def _tool(t: ToolSpec) -> dict[str, Any]:
-        return {"type": "function", "function": {"name": t.name, "description": t.description, "parameters": t.parameters}}
+        return {"type": "function",
+                "function": {"name": t.name, "description": t.description, "parameters": to_simple_schema(t.parameters)}}
 
     def structured(self, system: str, user: str, tool: ToolSpec) -> tuple[dict | None, Usage]:
-        msg, usage = self._call({
-            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
-            "tools": [self._tool(tool)], "temperature": 0,
-            "tool_choice": {"type": "function", "function": {"name": tool.name}},
-        })
-        calls = msg.get("tool_calls") or []
-        return (_safe_json(calls[0]["function"]["arguments"]) if calls else None), usage
+        """Mode JSON (plus fiable avec Llama que l'appel d'outil forcé) et schéma compact dans la consigne,
+        pour rester sous la limite de tokens par minute de l'offre gratuite."""
+        prompt = f"{system}\n\n{describe_schema(tool.parameters)}"
+        try:
+            msg, usage = self._call({
+                "messages": [{"role": "system", "content": prompt}, {"role": "user", "content": user}],
+                "response_format": {"type": "json_object"}, "temperature": 0,
+            })
+        except LLMError as e:
+            if e.code in INVALID_OUTPUT_CODES:
+                return None, Usage()  # JSON refusé par Groq : extract.py réessaie
+            raise
+        return _safe_json(msg.get("content") or ""), usage
 
     def chat(self, system: str, history: list[dict[str, str]], tools: list[ToolSpec],
              run_tool: RunTool, max_steps: int = 6) -> ChatResult:
         messages: list[dict[str, Any]] = [{"role": "system", "content": system}, *history]
         result = ChatResult("")
         for _ in range(max_steps):
-            msg, usage = self._call({"messages": messages, "tools": [self._tool(t) for t in tools]})
+            try:
+                msg, usage = self._call({"messages": messages, "tools": [self._tool(t) for t in tools]})
+            except LLMError as e:
+                if e.code not in INVALID_OUTPUT_CODES:
+                    raise
+                msg, usage = self._call({"messages": messages, "tools": [self._tool(t) for t in tools]})  # 2e essai
             result.usage.add(usage)
             calls = msg.get("tool_calls") or []
             if not calls:

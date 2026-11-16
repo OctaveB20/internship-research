@@ -74,7 +74,7 @@ def test_gemini_retries_on_429_then_succeeds(post):
 
 
 def test_gemini_429_exhausted_is_fatal(post):
-    post.queue += [Resp(429, {})] * (llm.MAX_RETRIES + 1)
+    post.queue += [Resp(429, {})] * (llm.RATE_LIMIT_RETRIES + 1)
     with pytest.raises(llm.LLMError, match="Limite") as e:
         llm.GeminiClient("SECRET", "m", sleep=lambda s: None).structured("s", "u", TOOL)
     assert e.value.fatal and "SECRET" not in str(e.value)
@@ -125,24 +125,66 @@ def test_tool_exception_is_returned_to_model(post):
     assert "mauvais filtre" in json.dumps(post.calls[1]["json"])
 
 
-def test_groq_structured_and_chat(post):
-    post.queue.append(Resp(200, {"choices": [{"message": {"tool_calls": [
-        {"id": "c1", "function": {"name": "t", "arguments": '{"a": "v", "e": "x"}'}}]}}],
-        "usage": {"prompt_tokens": 9, "completion_tokens": 4}}))
+def test_groq_structured_uses_json_mode_and_compact_schema(post):
+    post.queue.append(Resp(200, {"choices": [{"message": {"content": '{"a": "v", "e": "x"}'}}],
+                                 "usage": {"prompt_tokens": 9, "completion_tokens": 4}}))
     client = llm.GroqClient("GK", "llama")
-    data, usage = client.structured("s", "u", TOOL)
+    data, usage = client.structured("consigne", "u", TOOL)
     assert data == {"a": "v", "e": "x"} and usage.input_tokens == 9
+    body = post.calls[0]["json"]
     assert post.calls[0]["headers"]["Authorization"] == "Bearer GK"
-    assert post.calls[0]["json"]["tool_choice"]["function"]["name"] == "t"
+    assert body["response_format"] == {"type": "json_object"} and "tools" not in body
+    system = body["messages"][0]["content"]
+    assert system.startswith("consigne") and '- e ("x" | "y")' in system and "- l (liste d'objets {k})" in system
 
+
+def test_groq_invalid_json_is_retried_not_fatal(post):
+    post.queue.append(Resp(400, {"error": {"message": "Failed to validate JSON", "code": "json_validate_failed"}}))
+    assert llm.GroqClient("K", "m").structured("s", "u", TOOL) == (None, llm.Usage())
+
+
+def test_groq_other_400_still_raises(post):
+    post.queue.append(Resp(400, {"error": {"message": "bad model param", "code": "invalid_request"}}))
+    with pytest.raises(llm.LLMError, match="bad model param") as e:
+        llm.GroqClient("K", "m").structured("s", "u", TOOL)
+    assert e.value.code == "invalid_request"
+
+
+def test_groq_waits_for_rate_limit_from_message(post):
+    slept = []
+    post.queue += [Resp(429, {"error": {"message": "Rate limit reached on tokens per minute. "
+                                                   "Please try again in 7.66s.", "code": "rate_limit_exceeded"}}),
+                   Resp(429, {"error": {"message": "Please try again in 1m2.5s"}}),
+                   Resp(200, {"choices": [{"message": {"content": '{"a": null, "e": "y"}'}}], "usage": {}})]
+    data, _ = llm.GroqClient("K", "m", sleep=slept.append).structured("s", "u", TOOL)
+    assert data["e"] == "y" and slept == [pytest.approx(8.16), pytest.approx(63.0)]
+
+
+def test_groq_chat_with_simple_schema_and_retry(post):
     post.queue += [
+        Resp(400, {"error": {"message": "Failed to call a function", "code": "tool_use_failed"}}),
         Resp(200, {"choices": [{"message": {"content": None, "tool_calls": [
             {"id": "c2", "function": {"name": "get_job", "arguments": '{"job_id": "j1"}'}}]}}], "usage": {}}),
         Resp(200, {"choices": [{"message": {"content": "Réponse"}}], "usage": {}}),
     ]
-    res = client.chat("s", [{"role": "user", "content": "q"}], [TOOL], lambda n, a: {"ok": a["job_id"]})
+    res = llm.GroqClient("K", "m").chat("s", [{"role": "user", "content": "q"}], [TOOL], lambda n, a: {"ok": a["job_id"]})
     assert res.text == "Réponse"
+    params = post.calls[0]["json"]["tools"][0]["function"]["parameters"]
+    assert params["properties"]["a"]["type"] == "string" and None not in params["properties"]["e"]["enum"]
     assert post.calls[2]["json"]["messages"][-1] == {"role": "tool", "tool_call_id": "c2", "content": '{"ok": "j1"}'}
+
+
+def test_to_simple_schema_removes_nulls():
+    from src import chat
+    s = llm.to_simple_schema(chat.SEARCH_SCHEMA)
+    assert s["properties"]["work_mode"] == {"type": "string", "enum": ["onsite", "hybrid", "remote", "unknown"]}
+    assert s["properties"]["limit"]["type"] == "integer"
+
+
+def test_describe_schema_lists_every_extraction_field():
+    from src import extract
+    text = llm.describe_schema(extract.EXTRACTION_SCHEMA)
+    assert all(f"- {name} (" in text for name in extract.EXTRACTION_SCHEMA["properties"])
 
 
 def test_anthropic_structured_and_chat():

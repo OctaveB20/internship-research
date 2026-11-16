@@ -45,9 +45,15 @@ def test_asap_becomes_posting_date():
 
 
 def test_prompt_contains_posting_date_and_full_description():
-    job = make_job(job_description="A" * 20000)
+    job = make_job(job_description="A" * 10000)
     prompt = extract.build_user_prompt(job)
-    assert "Date de publication : 2026-11-10" in prompt and "A" * 20000 in prompt
+    assert "Date de publication : 2026-11-10" in prompt and "A" * 10000 in prompt and "tronquée" not in prompt
+
+
+def test_very_long_description_is_cut_and_flagged():
+    prompt = extract.build_user_prompt(make_job(job_description="B" * 50000))
+    assert "B" * extract.MAX_DESCRIPTION_CHARS in prompt and "B" * (extract.MAX_DESCRIPTION_CHARS + 1) not in prompt
+    assert "annonce tronquée" in prompt
 
 
 def test_retry_once_then_success():
