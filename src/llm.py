@@ -18,6 +18,11 @@ from src import config
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODELS_URL = "https://api.groq.com/openai/v1/models"
+# Remplaçants essayés, dans l'ordre, si le modèle de config.yaml a été retiré par Groq (erreur 404).
+GROQ_FALLBACK_MODELS = ["openai/gpt-oss-120b", "qwen/qwen3.6-27b", "openai/gpt-oss-20b", "qwen/qwen3-32b",
+                        "meta-llama/llama-4-maverick-17b-128e-instruct", "llama-3.1-8b-instant"]
+NOT_CHAT_MODELS = ("whisper", "tts", "guard", "playai", "orpheus", "compound", "prompt-guard")
 RETRY_STATUSES = {429, 500, 502, 503, 504}
 MAX_RETRIES = 3
 RATE_LIMIT_RETRIES = 6  # 429 : on attend le délai indiqué (limites par minute des offres gratuites), plusieurs fois
@@ -127,8 +132,9 @@ def _post_json(provider: str, url: str, headers: dict[str, str], body: dict[str,
             raise LLMError(f"Clé {provider} refusée ({resp.status_code}) : vérifie-la dans les secrets.", fatal=True)
         if resp.status_code == 404:
             hint = " (gemini-2.5-flash a été arrêté en octobre 2026 : essaie gemini-3.5-flash)" if provider == "Gemini" else ""
-            raise LLMError(f"Modèle introuvable chez {provider} (404) : vérifie `model` dans config.yaml{hint}.",
-                           fatal=True)
+            detail, code = _error_info(resp)
+            raise LLMError(f"Modèle introuvable chez {provider} (404) : vérifie `model` dans config.yaml{hint}."
+                           + (f" Détail : {detail[:200]}" if detail else ""), fatal=True, code=code or "model_not_found")
         if resp.status_code >= 400:
             detail, code = _error_info(resp)
             raise LLMError(f"{provider} a répondu HTTP {resp.status_code}" + (f" : {detail[:300]}" if detail else "."),
@@ -286,8 +292,43 @@ class GroqClient:
 
     def __init__(self, api_key: str, model: str, timeout: float = 90, sleep: Callable[[float], None] = time.sleep):
         self.api_key, self.model, self.timeout, self.sleep = api_key, model, timeout, sleep
+        self.notice = ""  # message pour l'UI si le modèle a été remplacé automatiquement
+
+    def available_models(self) -> list[str]:
+        """Modèles de discussion actuellement servis par Groq."""
+        try:
+            resp = requests.get(GROQ_MODELS_URL, headers={"Authorization": f"Bearer {self.api_key}"}, timeout=20)
+            data = resp.json().get("data", []) if resp.status_code == 200 else []
+        except (requests.RequestException, ValueError):
+            return []
+        return [m["id"] for m in data if isinstance(m, dict) and m.get("id") and m.get("active", True)
+                and not any(w in m["id"].lower() for w in NOT_CHAT_MODELS)]
+
+    def _replacement_model(self) -> str | None:
+        """Remplaçant du modèle retiré : le premier de GROQ_FALLBACK_MODELS encore servi, sinon le premier servi."""
+        available = [m for m in self.available_models() if m != self.model]
+        for candidate in GROQ_FALLBACK_MODELS:
+            if candidate in available:
+                return candidate
+        return available[0] if available else None
 
     def _call(self, body: dict[str, Any]) -> tuple[dict[str, Any], Usage]:
+        try:
+            return self._call_once(body)
+        except LLMError as e:
+            if not str(e).startswith("Modèle introuvable"):
+                raise
+            replacement = self._replacement_model()
+            if not replacement:
+                raise
+            self.notice = (f"Le modèle Groq « {self.model} » n'existe plus : « {replacement} » est utilisé à la place. "
+                           f"Mets model: {replacement} dans config.yaml pour ne plus voir ce message.")
+            self.model = replacement
+            return self._call_once(body)
+
+    def _call_once(self, body: dict[str, Any]) -> tuple[dict[str, Any], Usage]:
+        if self.model.startswith("openai/gpt-oss"):
+            body = {"reasoning_effort": "low", **body}  # moins de tokens de réflexion : économise le quota par minute
         data = _post_json(self.provider, GROQ_URL, {"Authorization": f"Bearer {self.api_key}"},
                           {"model": self.model, **body}, self.timeout, self.sleep)
         u = data.get("usage", {})

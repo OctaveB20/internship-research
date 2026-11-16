@@ -226,3 +226,36 @@ def test_usage_cost():
     u = llm.Usage(1_000_000, 2_000_000)
     assert u.cost_usd(config.AppConfig()) == 0
     assert u.cost_usd(config.AppConfig(price_input_per_mtok=0.1, price_output_per_mtok=0.5)) == pytest.approx(1.1)
+
+
+def test_groq_retired_model_is_replaced_automatically(post, monkeypatch):
+    class Models:
+        status_code = 200
+
+        def json(self):
+            return {"data": [{"id": "whisper-large-v3"}, {"id": "llama-3.1-8b-instant"}, {"id": "openai/gpt-oss-120b"}]}
+
+    monkeypatch.setattr(llm.requests, "get", lambda *a, **k: Models())
+    post.queue += [Resp(404, {"error": {"message": "The model `llama-3.3-70b-versatile` has been decommissioned",
+                                        "code": "model_decommissioned"}}),
+                   Resp(200, {"choices": [{"message": {"content": '{"a": "v", "e": "x"}'}}], "usage": {}})]
+    client = llm.GroqClient("K", "llama-3.3-70b-versatile")
+    data, _ = client.structured("s", "u", TOOL)
+    assert data == {"a": "v", "e": "x"} and client.model == "openai/gpt-oss-120b"
+    assert "openai/gpt-oss-120b" in client.notice
+    assert post.calls[1]["json"]["model"] == "openai/gpt-oss-120b"
+    assert post.calls[1]["json"]["reasoning_effort"] == "low"
+
+
+def test_groq_404_without_replacement_is_readable(post, monkeypatch):
+    monkeypatch.setattr(llm.requests, "get", lambda *a, **k: (_ for _ in ()).throw(requests.ConnectionError()))
+    post.queue.append(Resp(404, {"error": {"message": "model gone"}}))
+    with pytest.raises(llm.LLMError, match="Modèle introuvable.*model gone") as e:
+        llm.GroqClient("K", "old").structured("s", "u", TOOL)
+    assert e.value.fatal
+
+
+def test_no_reasoning_effort_for_other_models(post):
+    post.queue.append(Resp(200, {"choices": [{"message": {"content": "{}"}}], "usage": {}}))
+    llm.GroqClient("K", "llama-3.1-8b-instant").structured("s", "u", TOOL)
+    assert "reasoning_effort" not in post.calls[0]["json"]

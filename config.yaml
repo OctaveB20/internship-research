@@ -1,9 +1,9 @@
 # Fournisseur d'IA pour l'extraction et le chat.
 #   gemini    : gratuit (clé GEMINI_API_KEY sur aistudio.google.com)
-#   groq      : gratuit (clé GROQ_API_KEY), ex. model: llama-3.3-70b-versatile
+#   groq      : gratuit (clé GROQ_API_KEY), ex. model: openai/gpt-oss-120b
 #   anthropic : payant (clé ANTHROPIC_API_KEY), ex. model: claude-haiku-5-5
 llm_provider: groq
-model: llama-3.3-70b-versatile
+model: openai/gpt-oss-120b   # llama-3.3-70b-versatile a été retiré par Groq le 16/08/2026
 # Prix en $ par million de tokens, pour le coût estimé (0 = offre gratuite).
 # Claude Haiku 5.5 : 0.10 en entrée, 0.50 en sortie.
 price_input_per_mtok: 0

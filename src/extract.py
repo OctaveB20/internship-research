@@ -249,6 +249,8 @@ def extract_new_jobs(conn: db.Database, cfg: config.AppConfig, *, client: llm.LL
             summary.errors.append(f"{job.get('job_title')} ({job.get('employer_name')}) : {error}")
             log.warning("Extraction échouée pour %s : %s", job["job_id"], error)
             continue
-        db.save_extraction(conn, job["job_id"], cfg.model, ex.model_dump(mode="json"))
+        db.save_extraction(conn, job["job_id"], getattr(client, "model", cfg.model), ex.model_dump(mode="json"))
         summary.extracted += 1
+    if getattr(client, "notice", ""):
+        summary.errors.insert(0, client.notice)  # ex. modèle Groq retiré, remplacé automatiquement
     return summary
