@@ -147,3 +147,21 @@ def test_json_helpers_by_dialect(conn):
         "FROM extractions e JOIN scores s ON s.job_id = e.job_id").fetchone()
     assert (row["city"], row["d"], row["s"], bool(row["elim"])) == ("Paris", 6, 1400.5, True)
     assert conn.execute(f"SELECT 1 FROM jobs WHERE job_city {conn.like} ?", ("%PARIS%",)).fetchone()
+
+
+def test_postgres_reconnects_after_connection_lost(conn):
+    if not conn.is_postgres:
+        pytest.skip("reconnexion : Postgres uniquement")
+    db.upsert_job(conn, make_job("a"))
+    conn.raw.close()  # connexion fermée
+    assert db.count_jobs(conn) == 1  # reconnexion automatique, requête relancée
+    other = db.connect(url=conn._url)
+    other.execute("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid() "
+                  "AND datname = current_database()")  # le serveur coupe la connexion (comme Neon)
+    other.close()
+    assert db.get_job(conn, "a")["job_id"] == "a"
+
+
+def test_sql_errors_are_not_retried(conn):
+    with pytest.raises(Exception):
+        conn.execute("SELECT * FROM table_qui_n_existe_pas")

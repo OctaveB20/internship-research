@@ -120,18 +120,36 @@ class _Cursor:
 class Database:
     """Connexion commune aux deux moteurs."""
 
-    def __init__(self, raw: Any, dialect: str):
-        self.raw, self.dialect = raw, dialect
+    def __init__(self, raw: Any, dialect: str, url: str = ""):
+        self.raw, self.dialect, self._url = raw, dialect, url
 
     @property
     def is_postgres(self) -> bool:
         return self.dialect == "postgres"
 
+    def reconnect(self) -> None:
+        """Rouvre la connexion Postgres (coupée par le serveur après une longue inactivité)."""
+        try:
+            self.raw.close()
+        except Exception:  # déjà fermée
+            pass
+        self.raw = _pg_connect(self._url)
+
     def execute(self, sql: str, params: Iterable[Any] = ()) -> _Cursor:
         if self.is_postgres:
             sql = sql.replace("?", "%s")
-        cur = self.raw.cursor()
-        cur.execute(sql, list(params))
+        params = list(params)
+        try:
+            cur = self.raw.cursor()
+            cur.execute(sql, params)
+        except Exception as e:
+            # Neon / Supabase ferment les connexions restées inactives (ex. pendant une longue analyse IA) :
+            # on se reconnecte et on relance la requête une fois. Les autres erreurs remontent telles quelles.
+            if not (self.is_postgres and self._url and _is_connection_lost(e)):
+                raise
+            self.reconnect()
+            cur = self.raw.cursor()
+            cur.execute(sql, params)
         return _Cursor(cur)
 
     def commit(self) -> None:
@@ -184,15 +202,29 @@ def integrity_errors() -> tuple[type[Exception], ...]:
     return tuple(errors)
 
 
+def _pg_connect(url: str) -> Any:
+    import psycopg
+    # autocommit : une requête = une transaction ; prepare_threshold=None : obligatoire avec les
+    # connexions « poolées » (Neon, Supabase), qui ne gèrent pas les requêtes préparées.
+    return psycopg.connect(url, autocommit=True, prepare_threshold=None, connect_timeout=10)
+
+
+def _is_connection_lost(error: Exception) -> bool:
+    """Connexion fermée côté serveur ou réseau (à distinguer d'une erreur SQL)."""
+    try:
+        import psycopg
+    except ImportError:  # pragma: no cover
+        return False
+    if isinstance(error, psycopg.InterfaceError):  # « the connection is closed »
+        return True
+    return isinstance(error, psycopg.OperationalError) and not isinstance(error, psycopg.errors.QueryCanceled)
+
+
 def connect(path: Path | str | None = None, url: str | None = None) -> Database:
     """Postgres si une URL est donnée (ou DATABASE_URL défini et pas de chemin), sinon SQLite."""
     url = url if url is not None else ("" if path else config.database_url())
     if url:
-        import psycopg
-        # autocommit : une requête = une transaction ; prepare_threshold=None : obligatoire avec le
-        # connexions « poolées » (Neon, Supabase), qui ne gèrent pas les requêtes préparées.
-        raw = psycopg.connect(url, autocommit=True, prepare_threshold=None, connect_timeout=10)
-        return Database(raw, "postgres")
+        return Database(_pg_connect(url), "postgres", url)
     path = Path(path) if path else config.db_path()
     if str(path) != ":memory:":
         path.parent.mkdir(parents=True, exist_ok=True)
