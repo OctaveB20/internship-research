@@ -179,3 +179,16 @@ def test_assistant_shows_starter_questions(env, monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "x")
     chat = AppTest.from_file(PAGES[4], default_timeout=30).run()
     assert not chat.exception and any(b.label == "Mes 5 meilleures offres" for b in chat.button)
+
+
+def test_add_manual_application_from_ui(env):
+    cand = AppTest.from_file(PAGES[5], default_timeout=30).run()
+    assert not cand.exception
+    form = [t for t in cand.text_input]
+    next(t for t in form if t.label.startswith("Intitulé")).input("Stage FP&A")
+    next(t for t in form if t.label.startswith("Entreprise")).input("Acme")
+    next(b for b in cand.button if b.label == "Ajouter").click().run()
+    assert not cand.exception
+    cand = AppTest.from_file(PAGES[5], default_timeout=30).run()
+    assert any(b.label == "Fiche" for b in cand.button)
+    assert any("Stage FP&A" in m.value for m in cand.markdown)

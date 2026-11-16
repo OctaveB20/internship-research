@@ -123,3 +123,26 @@ def test_needs_scoring_after_migration(two_users):
     assert not db.needs_scoring(two_users, "Octave")
     two_users.execute("DELETE FROM scores WHERE username = ?", ("Octave",))
     assert db.needs_scoring(two_users, "Octave") and not db.needs_scoring(two_users, "Marilou")
+
+
+def test_manual_application_lifecycle(conn):
+    job_id = db.add_manual_application(conn, "Marilou", "Stage audit", "Cabinet X", city="Lyon", country="France",
+                                       link="https://x", status="postulé", notes="via salon",
+                                       applied_on="2026-11-02")
+    assert job_id.startswith(db.MANUAL_PREFIX)
+    rows = offers.load_offers(conn, "Marilou")
+    assert [(r["titre"], r["statut"], r["source"], r["extraite"]) for r in rows] == [
+        ("Stage audit", "postulé", "Ajout manuel", True)]
+    assert offers.load_offers(conn, "Octave") == []  # visible seulement pour Marilou
+    assert db.jobs_without_extraction(conn) == []  # jamais envoyée à l'IA
+    assert db.delete_manual_application(conn, job_id) and offers.load_offers(conn, "Marilou") == []
+
+
+def test_manual_application_requires_title_and_employer(conn):
+    with pytest.raises(ValueError):
+        db.add_manual_application(conn, "Octave", " ", "X")
+
+
+def test_collected_offers_cannot_be_deleted_as_manual(conn):
+    db.upsert_job(conn, make_job("real"))
+    assert not db.delete_manual_application(conn, "real") and db.get_job(conn, "real")

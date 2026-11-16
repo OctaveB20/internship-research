@@ -37,10 +37,11 @@ class LLMError(Exception):
     """Erreur lisible à afficher dans l'UI. `fatal` : inutile de réessayer sur l'offre suivante
     (clé absente ou refusée, modèle inconnu, limite gratuite atteinte)."""
 
-    def __init__(self, message: str, fatal: bool = False, code: str = ""):
+    def __init__(self, message: str, fatal: bool = False, code: str = "", retry_after: float = 0):
         super().__init__(message)
         self.fatal = fatal
         self.code = code  # code d'erreur renvoyé par l'API (ex. json_validate_failed chez Groq)
+        self.retry_after = retry_after  # 429 : délai conseillé avant de réessayer (secondes)
 
 
 @dataclass
@@ -112,22 +113,24 @@ def _error_message(resp: requests.Response) -> str:
 
 
 def _post_json(provider: str, url: str, headers: dict[str, str], body: dict[str, Any], timeout: float,
-               sleep: Callable[[float], None] = time.sleep) -> dict[str, Any]:
+               sleep: Callable[[float], None] = time.sleep, rate_limit_retries: int = RATE_LIMIT_RETRIES
+               ) -> dict[str, Any]:
     """POST avec réessais sur 429/5xx. Lève LLMError lisible (jamais la clé)."""
-    for attempt in range(RATE_LIMIT_RETRIES + 1):
+    for attempt in range(max(rate_limit_retries, MAX_RETRIES) + 1):
         try:
             resp = requests.post(url, headers=headers, json=body, timeout=timeout)
         except requests.Timeout:
             raise LLMError(f"{provider} n'a pas répondu en {timeout:.0f} s.") from None
         except requests.RequestException as e:
             raise LLMError(f"Connexion à {provider} impossible ({type(e).__name__}).") from None
-        retries = RATE_LIMIT_RETRIES if resp.status_code == 429 else MAX_RETRIES
+        retries = rate_limit_retries if resp.status_code == 429 else MAX_RETRIES
         if resp.status_code in RETRY_STATUSES and attempt < retries:
             sleep(_retry_delay(resp, attempt))
             continue
         if resp.status_code == 429:
             raise LLMError(f"Limite de requêtes {provider} atteinte (429) : réessaie dans quelques minutes "
-                           "(l'offre gratuite limite les requêtes par minute et par jour).", fatal=True)
+                           "(l'offre gratuite limite les requêtes par minute et par jour).", fatal=True,
+                           code="rate_limit", retry_after=_retry_delay(resp, attempt))
         if resp.status_code in (401, 403):
             raise LLMError(f"Clé {provider} refusée ({resp.status_code}) : vérifie-la dans les secrets.", fatal=True)
         if resp.status_code == 404:
@@ -290,9 +293,45 @@ def describe_schema(schema: dict[str, Any]) -> str:
 class GroqClient:
     provider = "Groq"
 
-    def __init__(self, api_key: str, model: str, timeout: float = 90, sleep: Callable[[float], None] = time.sleep):
-        self.api_key, self.model, self.timeout, self.sleep = api_key, model, timeout, sleep
+    def __init__(self, api_key: str, model: str, timeout: float = 90, sleep: Callable[[float], None] = time.sleep,
+                 clock: Callable[[], float] = time.monotonic, rotate: bool = True):
+        self.api_key, self.model, self.timeout, self.sleep, self.clock = api_key, model, timeout, sleep, clock
         self.notice = ""  # message pour l'UI si le modèle a été remplacé automatiquement
+        self.rotate = rotate  # passer à un autre modèle quand l'un atteint sa limite par minute
+        self._pool: list[str] | None = None  # modèles utilisables, le modèle de config.yaml en premier
+        self._cooldown: dict[str, float] = {}  # modèle → instant où il redevient utilisable
+        self.used: dict[str, int] = {}  # nombre de réponses par modèle (pour information)
+
+    def pool(self) -> list[str]:
+        """Modèle de config.yaml puis remplaçants servis par Groq : chacun a sa propre limite par minute."""
+        if self._pool is None:
+            available = set(self.available_models()) if self.rotate else set()
+            self._pool = [self.model] + [m for m in GROQ_FALLBACK_MODELS if m in available and m != self.model]
+        return self._pool
+
+    def _post_rotating(self, body: dict[str, Any]) -> dict[str, Any]:
+        """Envoie la requête au premier modèle disponible ; sur 429, le met en pause et essaie le suivant.
+        N'attend que si tous les modèles sont en pause (au lieu d'attendre à chaque 429)."""
+        for _ in range(RATE_LIMIT_RETRIES * 3):
+            now = self.clock()
+            ready = [m for m in self.pool() if self._cooldown.get(m, 0) <= now]
+            if not ready:
+                self.sleep(min(MAX_WAIT_S, max(0.5, min(self._cooldown.values()) - now)))
+                continue
+            model = ready[0]
+            extra = {"reasoning_effort": "low"} if model.startswith("openai/gpt-oss") else {}
+            try:
+                data = _post_json(self.provider, GROQ_URL, {"Authorization": f"Bearer {self.api_key}"},
+                                  {"model": model, **extra, **body}, self.timeout, self.sleep, rate_limit_retries=0)
+            except LLMError as e:
+                if e.code != "rate_limit":
+                    raise
+                self._cooldown[model] = self.clock() + max(e.retry_after, 1)
+                continue
+            self.used[model] = self.used.get(model, 0) + 1
+            return data
+        raise LLMError("Limite de requêtes Groq atteinte sur tous les modèles : réessaie dans quelques minutes.",
+                       fatal=True, code="rate_limit")
 
     def available_models(self) -> list[str]:
         """Modèles de discussion actuellement servis par Groq."""
@@ -324,13 +363,12 @@ class GroqClient:
             self.notice = (f"Le modèle Groq « {self.model} » n'existe plus : « {replacement} » est utilisé à la place. "
                            f"Mets model: {replacement} dans config.yaml pour ne plus voir ce message.")
             self.model = replacement
+            self._pool = None
             return self._call_once(body)
 
     def _call_once(self, body: dict[str, Any]) -> tuple[dict[str, Any], Usage]:
-        if self.model.startswith("openai/gpt-oss"):
-            body = {"reasoning_effort": "low", **body}  # moins de tokens de réflexion : économise le quota par minute
-        data = _post_json(self.provider, GROQ_URL, {"Authorization": f"Bearer {self.api_key}"},
-                          {"model": self.model, **body}, self.timeout, self.sleep)
+        # gpt-oss : reasoning_effort=low (moins de tokens de réflexion, ajouté dans _post_rotating)
+        data = self._post_rotating({"max_completion_tokens": 2000, **body})
         u = data.get("usage", {})
         choices = data.get("choices") or []
         if not choices:

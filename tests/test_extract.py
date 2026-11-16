@@ -45,9 +45,9 @@ def test_asap_becomes_posting_date():
 
 
 def test_prompt_contains_posting_date_and_full_description():
-    job = make_job(job_description="A" * 10000)
+    job = make_job(job_description="A" * 6000)
     prompt = extract.build_user_prompt(job)
-    assert "Date de publication : 2026-11-10" in prompt and "A" * 10000 in prompt and "tronquée" not in prompt
+    assert "Date de publication : 2026-11-10" in prompt and "A" * 6000 in prompt and "tronquée" not in prompt
 
 
 def test_very_long_description_is_cut_and_flagged():
@@ -115,3 +115,32 @@ def test_compare_with_reference():
     got = extract.JobExtraction.model_validate({**GOOD, "city": "PARIS", "stipend_monthly_eur": 999})
     rows = {r["champ"]: r["ok"] for r in extract.compare_with_reference(got, GOOD)}
     assert rows["city"] is True and rows["stipend_monthly_eur"] is False and "summary_fr" not in rows
+
+
+def test_description_cleanup_removes_repeated_lines_and_spaces():
+    job = make_job(job_description="Missions :\n\n  Clôtures   mensuelles \nPostuler ici\nPostuler ici\n\n")
+    assert extract._description(job) == "Missions :\nClôtures mensuelles\nPostuler ici"
+
+
+@pytest.mark.parametrize("title, contract", [
+    ("Contrôleur de gestion junior (H/F) – CDI", "autre"), ("Werkstudent (m/w/d) Finance", "working_student"),
+    ("Contrôle de gestion – Alternance 12 mois", "alternance"), ("Senior Financial Analyst (m/w/d)", "autre"),
+    ("Stage en alternance contrôle de gestion", "alternance"),
+])
+def test_rule_based_extraction_skips_obvious_non_internships(title, contract):
+    ex = extract.rule_based_extraction(make_job(job_title=title))
+    assert ex and not ex.is_internship and ex.contract_type == contract
+
+
+@pytest.mark.parametrize("title", ["Stage Contrôle de gestion (H/F)", "Finance Intern FP&A", "Praktikum Treasury",
+                                   "Assistant Manager Controlling – Praktikum", "Business Controller", "VIE Finance"])
+def test_rule_based_extraction_leaves_internships_to_the_llm(title):
+    assert extract.rule_based_extraction(make_job(job_title=title)) is None
+
+
+def test_batch_skips_obvious_offers_without_llm(conn):
+    db.upsert_jobs(conn, [make_job("a", job_title="Werkstudent Controlling"), make_job("b")])
+    client = FakeLLM([GOOD])
+    s = extract.extract_new_jobs(conn, config.AppConfig(), client=client, dev=False)
+    assert (s.skipped, s.extracted, client.calls) == (1, 1, 1)
+    assert db.get_extraction(conn, "a")["contract_type"] == "working_student"

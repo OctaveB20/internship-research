@@ -465,6 +465,45 @@ def link_jobs_to_user(conn: Database, job_ids: Iterable[str], user: str) -> int:
     return added
 
 
+MANUAL_PREFIX = "manual-"
+MANUAL_SOURCE = "Ajout manuel"
+
+
+def add_manual_application(conn: Database, user: str, title: str, employer: str, *, city: str = "",
+                           country: str = "", link: str = "", status: str = "postulé", notes: str = "",
+                           applied_on: str = "") -> str:
+    """Candidature faite en dehors de l'app : enregistrée comme une offre de `user`, avec son statut.
+    Renvoie l'identifiant créé (préfixe « manual- »)."""
+    import uuid
+
+    if not title.strip() or not employer.strip():
+        raise ValueError("intitulé et entreprise obligatoires")
+    job_id = f"{MANUAL_PREFIX}{uuid.uuid4().hex[:12]}"
+    upsert_job(conn, {"job_id": job_id, "job_title": title.strip(), "employer_name": employer.strip(),
+                      "job_city": city.strip() or None, "job_country": country.strip() or None,
+                      "job_apply_link": link.strip() or None, "job_publisher": MANUAL_SOURCE,
+                      "job_description": notes.strip(), "job_posted_at_datetime_utc": applied_on or None,
+                      "manual": True, "applied_on": applied_on})
+    save_extraction(conn, job_id, "manuel", {
+        "is_internship": True, "contract_type": "stage", "city": city.strip() or None,
+        "country": country.strip() or None, "work_mode": "unknown", "required_skills": [], "languages": [],
+        "domain": "", "summary_fr": "Candidature ajoutée manuellement."
+        + (f" Envoyée le {applied_on[8:10]}/{applied_on[5:7]}/{applied_on[:4]}." if applied_on else "")})
+    link_jobs_to_user(conn, [job_id], user)
+    set_application(conn, job_id, status, notes.strip(), user)
+    return job_id
+
+
+def delete_manual_application(conn: Database, job_id: str) -> bool:
+    """Supprime une candidature ajoutée à la main (jamais une offre collectée). True si supprimée."""
+    if not job_id.startswith(MANUAL_PREFIX):
+        return False
+    for table in ("applications", "scores", "job_users", "extractions", "jobs"):
+        conn.execute(f"DELETE FROM {table} WHERE job_id = ?", (job_id,))
+    conn.commit()
+    return True
+
+
 def user_job_ids(conn: Database, user: str) -> set[str]:
     """Offres trouvées par une personne."""
     return {r[0] for r in conn.execute("SELECT job_id FROM job_users WHERE username = ?", (user,)).fetchall()}

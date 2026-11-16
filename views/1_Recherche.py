@@ -175,9 +175,11 @@ if launch and current:
     cost_usd = ext.usage.cost_usd(cfg)
     # Bilan gardé en session : il reste affiché (avec ses boutons) après les clics suivants.
     st.session_state[f"last_run_{user}"] = {"new": col.new, "message": (
-        f"**{col.new} nouvelle(s) offre(s) pour {user}**, {ext.extracted + ext.from_reference} extraite(s)"
+        f"**{col.new} nouvelle(s) offre(s) pour {user}**, {ext.extracted + ext.from_reference} analysée(s) par l'IA"
         + (f" (dont {ext.from_reference} depuis la référence des fixtures)" if ext.from_reference else "")
+        + (f", {ext.skipped} écartée(s) d'après leur titre sans appel IA (CDI, alternance…)" if ext.skipped else "")
         + (f", {ext.failed} échec(s)" if ext.failed else "")
+        + (" · modèles : " + ", ".join(f"{m} ({n})" for m, n in ext.models.items()) if len(ext.models) > 1 else "")
         + f", {n_scored} offre(s) scorée(s). Tokens IA : {ext.usage.input_tokens:,} en entrée, "
         f"{ext.usage.output_tokens:,} en sortie · coût estimé : "
         + ("0 $ (offre gratuite)" if cost_usd == 0 else f"{cost_usd:.4f} $"))}

@@ -139,15 +139,56 @@ def build_user_prompt(job: dict[str, Any]) -> str:
             f"Annonce :\n{_description(job)}")
 
 
-MAX_DESCRIPTION_CHARS = 12000  # ≈ 3 000 tokens : les annonces dépassent rarement, et ça protège les limites gratuites
+MAX_DESCRIPTION_CHARS = 8000  # ≈ 2 000 tokens : l'essentiel d'une annonce, et des requêtes IA plus rapides
 
 
 def _description(job: dict[str, Any]) -> str:
-    """Annonce complète, coupée seulement si elle est exceptionnellement longue (signalé à l'IA)."""
+    """Annonce nettoyée (espaces et lignes vides en double retirés), coupée si elle est très longue."""
     text = job.get("job_description") or ""
+    lines, seen = [], set()
+    for line in (re.sub(r"[ \t\u00a0]+", " ", l).strip() for l in text.splitlines()):
+        key = line.lower()
+        if line and key not in seen:  # les annonces répètent souvent les mêmes lignes (pied de page…)
+            seen.add(key)
+            lines.append(line)
+    text = "\n".join(lines)
     if len(text) <= MAX_DESCRIPTION_CHARS:
         return text
     return text[:MAX_DESCRIPTION_CHARS] + "\n[… annonce tronquée, la suite n'est pas fournie]"
+
+
+# ---------- Tri sans IA ----------
+RULES_MODEL = "règles"
+_INTERNSHIP_WORDS = re.compile(r"\b(stage|stages|stagiaire|intern|interns|internship|praktikum|praktikant|praktikantin|"
+                               r"pflichtpraktikum|tirocinio|tirocinante|practicas|becario|becaria|stagiair|estagio|"
+                               r"trainee|vie|v i e)\b")
+_TITLE_RULES: list[tuple[re.Pattern, str, str]] = [
+    (re.compile(r"\b(alternance|alternant|alternante|apprentissage|apprenti|apprentie|contrat pro|"
+                r"contrat de professionnalisation|ausbildung|duales studium|dual student|apprentice|apprenticeship)\b"),
+     "alternance", "alternance / apprentissage"),
+    (re.compile(r"\b(werkstudent|werkstudentin|working student|student assistant|studentische aushilfe)\b"),
+     "working_student", "Werkstudent"),
+    (re.compile(r"\b(cdi|cdd|festanstellung|unbefristet|befristet|permanent|full time|vollzeit|"
+                r"temps plein|interim|freelance|freiberuflich)\b"), "autre", "CDI / CDD / emploi"),
+    (re.compile(r"\b(senior|head of|director|directeur|directrice|leiter|leiterin|teamleiter|lead|principal|"
+                r"manager|managerin|chef de|responsable|expert|experte|consultant confirme)\b"),
+     "autre", "poste confirmé"),
+]
+
+
+def rule_based_extraction(job: dict[str, Any]) -> JobExtraction | None:
+    """Offre écartée d'après son seul titre (CDI, alternance, Werkstudent, poste senior…), sans appel IA.
+    None si le titre ne permet pas de conclure (ou parle de stage) : l'IA analyse alors l'annonce."""
+    title = db.normalize_text(job.get("job_title"))
+    alternance = _TITLE_RULES[0][0].search(title)
+    if _INTERNSHIP_WORDS.search(title) and not alternance:
+        return None
+    for pattern, contract, label in _TITLE_RULES:
+        if pattern.search(title):
+            return JobExtraction(
+                is_internship=False, contract_type=contract, city=job.get("job_city"), country=None,
+                domain="", summary_fr=f"Écartée sans analyse IA : le titre indique un(e) {label}.")
+    return None
 
 
 def _apply_asap(ex: JobExtraction, job: dict[str, Any]) -> JobExtraction:
@@ -210,6 +251,8 @@ def compare_with_reference(got: JobExtraction, expected: dict[str, Any]) -> list
 class ExtractSummary:
     extracted: int = 0
     from_reference: int = 0
+    skipped: int = 0  # écartées d'après leur titre, sans appel IA
+    models: dict[str, int] = field(default_factory=dict)  # réponses par modèle (rotation Groq)
     failed: int = 0
     usage: llm.Usage = field(default_factory=llm.Usage)
     errors: list[str] = field(default_factory=list)
@@ -230,6 +273,11 @@ def extract_new_jobs(conn: db.Database, cfg: config.AppConfig, *, client: llm.LL
         if job["job_id"] in reference:
             db.save_extraction(conn, job["job_id"], FIXTURE_MODEL, reference[job["job_id"]])
             summary.from_reference += 1
+            continue
+        quick = rule_based_extraction(job)
+        if quick is not None:  # CDI, alternance… : écartée sans dépenser de requête IA
+            db.save_extraction(conn, job["job_id"], RULES_MODEL, quick.model_dump(mode="json"))
+            summary.skipped += 1
             continue
         try:
             client = client or llm.make_client(cfg)
@@ -253,4 +301,5 @@ def extract_new_jobs(conn: db.Database, cfg: config.AppConfig, *, client: llm.LL
         summary.extracted += 1
     if getattr(client, "notice", ""):
         summary.errors.insert(0, client.notice)  # ex. modèle Groq retiré, remplacé automatiquement
+    summary.models = dict(getattr(client, "used", {}) or {})
     return summary

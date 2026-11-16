@@ -110,7 +110,8 @@ if pending and action_col.button("Analyser maintenant", icon=":material/auto_awe
         scoring.score_all(conn, profile, user)
     for err in summary.errors:
         st.warning(err)
-    st.toast(f"{summary.extracted + summary.from_reference} offre(s) analysée(s).")
+    st.toast(f"{summary.extracted + summary.from_reference} offre(s) analysée(s)"
+             + (f", {summary.skipped} écartée(s) sans IA" if summary.skipped else "") + ".")
     st.rerun()
 
 if not shown:

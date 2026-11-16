@@ -38,7 +38,23 @@ def post(monkeypatch):
         return item
 
     monkeypatch.setattr(llm.requests, "post", fake)
+    # Liste des modèles Groq : vide par défaut (pas de rotation, aucun appel réseau dans les tests)
+    monkeypatch.setattr(llm.requests, "get", lambda *a, **k: SimpleNamespace(status_code=200, json=lambda: {"data": []}))
     return SimpleNamespace(calls=calls, queue=queue)
+
+
+class FakeClock:
+    """Horloge qui avance quand on « dort »."""
+
+    def __init__(self):
+        self.now, self.slept = 0.0, []
+
+    def __call__(self):
+        return self.now
+
+    def sleep(self, seconds):
+        self.slept.append(seconds)
+        self.now += seconds
 
 
 def gemini_text(text, usage=(10, 5)):
@@ -151,13 +167,40 @@ def test_groq_other_400_still_raises(post):
 
 
 def test_groq_waits_for_rate_limit_from_message(post):
-    slept = []
+    clock = FakeClock()
     post.queue += [Resp(429, {"error": {"message": "Rate limit reached on tokens per minute. "
                                                    "Please try again in 7.66s.", "code": "rate_limit_exceeded"}}),
                    Resp(429, {"error": {"message": "Please try again in 1m2.5s"}}),
                    Resp(200, {"choices": [{"message": {"content": '{"a": null, "e": "y"}'}}], "usage": {}})]
-    data, _ = llm.GroqClient("K", "m", sleep=slept.append).structured("s", "u", TOOL)
-    assert data["e"] == "y" and slept == [pytest.approx(8.16), pytest.approx(63.0)]
+    data, _ = llm.GroqClient("K", "m", sleep=clock.sleep, clock=clock).structured("s", "u", TOOL)
+    assert data["e"] == "y" and clock.slept == [pytest.approx(8.16), pytest.approx(63.0)]
+
+
+def test_groq_rotates_models_instead_of_waiting(post, monkeypatch):
+    monkeypatch.setattr(llm.requests, "get", lambda *a, **k: SimpleNamespace(
+        status_code=200, json=lambda: {"data": [{"id": "openai/gpt-oss-20b"}, {"id": "llama-3.1-8b-instant"}]}))
+    clock = FakeClock()
+    ok = Resp(200, {"choices": [{"message": {"content": '{"a": "v", "e": "x"}'}}], "usage": {}})
+    post.queue += [Resp(429, {"error": {"message": "Please try again in 20s"}}), ok, ok]
+    client = llm.GroqClient("K", "openai/gpt-oss-120b", sleep=clock.sleep, clock=clock)
+    assert client.structured("s", "u", TOOL)[0] == {"a": "v", "e": "x"}
+    assert clock.slept == []  # aucune attente : un autre modèle a répondu
+    assert [c["json"]["model"] for c in post.calls] == ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]
+    client.structured("s", "u", TOOL)  # le 1er modèle est encore en pause : on reste sur le 2e
+    assert post.calls[-1]["json"]["model"] == "openai/gpt-oss-20b"
+    assert client.used == {"openai/gpt-oss-20b": 2}
+    assert post.calls[1]["json"]["reasoning_effort"] == "low" and post.calls[1]["json"]["max_completion_tokens"] == 2000
+
+
+def test_groq_all_models_busy_waits_for_the_first_free(post, monkeypatch):
+    monkeypatch.setattr(llm.requests, "get", lambda *a, **k: SimpleNamespace(
+        status_code=200, json=lambda: {"data": [{"id": "llama-3.1-8b-instant"}]}))
+    clock = FakeClock()
+    post.queue += [Resp(429, {"error": {"message": "try again in 30s"}}), Resp(429, {"error": {"message": "try again in 5s"}}),
+                   Resp(200, {"choices": [{"message": {"content": '{"e": "x"}'}}], "usage": {}})]
+    client = llm.GroqClient("K", "openai/gpt-oss-120b", sleep=clock.sleep, clock=clock)
+    assert client.structured("s", "u", TOOL)[0] == {"e": "x"}
+    assert clock.slept == [pytest.approx(5.5)] and post.calls[-1]["json"]["model"] == "llama-3.1-8b-instant"
 
 
 def test_groq_chat_with_simple_schema_and_retry(post):
