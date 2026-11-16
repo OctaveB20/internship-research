@@ -112,6 +112,7 @@ class AppConfig(BaseModel):
     employment_types: str = "INTERN"
     request_timeout_s: float = 30
     default_titles: list[str] = ["stage contrôle de gestion", "stage FP&A", "finance intern"]
+    users: list[str] = Field(default=["Octave", "Marilou", "Alex"], min_length=1)  # le 1er reçoit les anciennes offres
     queries: list[SearchQuery] = []  # facultatif : la page Recherche utilise ses propres critères
 
 

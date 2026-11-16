@@ -15,6 +15,7 @@ from typing import Any, Iterable
 
 from src import config
 
+DEFAULT_USER = "Octave"  # propriétaire des offres trouvées avant l'ajout des utilisateurs
 STATUSES = ("à voir", "intéressant", "postulé", "entretien", "refusé", "offre")
 DEFAULT_STATUS = STATUSES[0]
 
@@ -45,17 +46,27 @@ CREATE TABLE IF NOT EXISTS extractions (
     extracted_json TEXT NOT NULL,
     extracted_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS job_users (
+    job_id TEXT NOT NULL REFERENCES jobs(job_id) ON DELETE CASCADE,
+    username TEXT NOT NULL,
+    first_seen TEXT NOT NULL,
+    PRIMARY KEY (job_id, username)
+);
 CREATE TABLE IF NOT EXISTS scores (
-    job_id TEXT PRIMARY KEY REFERENCES jobs(job_id) ON DELETE CASCADE,
+    job_id TEXT NOT NULL REFERENCES jobs(job_id) ON DELETE CASCADE,
+    username TEXT NOT NULL,
     score DOUBLE PRECISION NOT NULL,
     breakdown_json TEXT NOT NULL,
-    scored_at TEXT NOT NULL
+    scored_at TEXT NOT NULL,
+    PRIMARY KEY (job_id, username)
 );
 CREATE TABLE IF NOT EXISTS applications (
-    job_id TEXT PRIMARY KEY REFERENCES jobs(job_id) ON DELETE CASCADE,
+    job_id TEXT NOT NULL REFERENCES jobs(job_id) ON DELETE CASCADE,
+    username TEXT NOT NULL,
     status TEXT NOT NULL CHECK (status IN ({", ".join(f"'{s}'" for s in STATUSES)})),
     notes TEXT NOT NULL DEFAULT '',
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (job_id, username)
 );
 CREATE TABLE IF NOT EXISTS api_cache (
     cache_key TEXT PRIMARY KEY,
@@ -190,13 +201,44 @@ def connect(path: Path | str | None = None, url: str | None = None) -> Database:
     return Database(raw, "sqlite")
 
 
-def init_db(conn: Database) -> None:
-    """Crée les tables manquantes."""
+def init_db(conn: Database, owner: str = DEFAULT_USER) -> None:
+    """Crée les tables manquantes et migre les anciennes bases (offres sans utilisateur → `owner`)."""
+    _migrate_per_user_tables(conn, owner)
     for statement in SCHEMA.split(";"):
         if statement.strip():
             conn.execute(statement)
     conn.commit()
+    if get_setting(conn, "users_migrated") is None:
+        # Offres collectées avant l'ajout des utilisateurs : attribuées à `owner` (une seule fois).
+        conn.execute("INSERT INTO job_users (job_id, username, first_seen) SELECT job_id, ?, first_seen FROM jobs WHERE true "
+                     "ON CONFLICT (job_id, username) DO NOTHING", (owner,))
+        set_setting(conn, "users_migrated", owner)
 
+
+def column_names(conn: Database, table: str) -> set[str]:
+    """Colonnes d'une table (vide si elle n'existe pas)."""
+    if conn.is_postgres:
+        sql = ("SELECT column_name FROM information_schema.columns "
+               "WHERE table_schema = current_schema() AND table_name = ?")
+        return {r[0] for r in conn.execute(sql, (table,)).fetchall()}
+    return {r["name"] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+
+
+def _migrate_per_user_tables(conn: Database, owner: str) -> None:
+    """Anciennes tables scores/applications (sans colonne username) → nouvelles, en gardant statuts et notes."""
+    if "username" not in column_names(conn, "applications") and column_names(conn, "applications"):
+        conn.execute("ALTER TABLE applications RENAME TO applications_old")
+        conn.commit()
+        for statement in SCHEMA.split(";"):
+            if "TABLE IF NOT EXISTS applications" in statement:
+                conn.execute(statement)
+        conn.execute("INSERT INTO applications (job_id, username, status, notes, updated_at) "
+                     "SELECT job_id, ?, status, notes, updated_at FROM applications_old", (owner,))
+        conn.execute("DROP TABLE applications_old")
+        conn.commit()
+    if "username" not in column_names(conn, "scores") and column_names(conn, "scores"):
+        conn.execute("DROP TABLE scores")  # recalculés gratuitement au prochain « Enregistrer » / recherche
+        conn.commit()
 
 def list_tables(conn: Database) -> set[str]:
     """Noms des tables existantes."""
@@ -252,17 +294,22 @@ def jobs_without_extraction(conn: Database) -> list[dict[str, Any]]:
     return [dict(r) for r in rows]
 
 
-def list_jobs_overview(conn: Database) -> list[dict[str, Any]]:
-    """Offres jointes à leur extraction, score et statut (JSON décodés), triées par score."""
+def list_jobs_overview(conn: Database, user: str | None = None) -> list[dict[str, Any]]:
+    """Offres jointes à leur extraction, score et statut (JSON décodés), triées par score.
+    Avec `user` : seulement les offres trouvées par cette personne, avec ses scores et ses statuts."""
+    who = user or DEFAULT_USER
+    only_user = ("JOIN job_users ju ON ju.job_id = j.job_id AND ju.username = ? " if user else "")
+    params = [DEFAULT_STATUS] + ([user] if user else []) + [who, who]
     rows = conn.execute(
         "SELECT j.*, e.extracted_json, e.model, s.score, s.breakdown_json, "
         "COALESCE(a.status, ?) AS status, COALESCE(a.notes, '') AS notes "
         "FROM jobs j "
+        + only_user +
         "LEFT JOIN extractions e ON e.job_id = j.job_id "
-        "LEFT JOIN scores s ON s.job_id = j.job_id "
-        "LEFT JOIN applications a ON a.job_id = j.job_id "
+        "LEFT JOIN scores s ON s.job_id = j.job_id AND s.username = ? "
+        "LEFT JOIN applications a ON a.job_id = j.job_id AND a.username = ? "
         "ORDER BY s.score IS NULL, s.score DESC, j.last_seen DESC",
-        (DEFAULT_STATUS,),
+        params,
     ).fetchall()
     out = []
     for r in rows:
@@ -329,47 +376,66 @@ def get_extraction(conn: Database, job_id: str) -> dict[str, Any] | None:
 
 
 # ---------- scores ----------
-def save_score(conn: Database, job_id: str, score: float, breakdown: dict[str, Any]) -> None:
-    """Enregistre (ou remplace) le score d'une offre."""
+def save_score(conn: Database, job_id: str, score: float, breakdown: dict[str, Any], user: str = DEFAULT_USER) -> None:
+    """Enregistre (ou remplace) le score d'une offre pour une personne."""
     conn.execute(
-        "INSERT INTO scores (job_id, score, breakdown_json, scored_at) VALUES (?, ?, ?, ?) "
-        "ON CONFLICT(job_id) DO UPDATE SET score = excluded.score, breakdown_json = excluded.breakdown_json, "
-        "scored_at = excluded.scored_at",
-        (job_id, float(score), json.dumps(breakdown, ensure_ascii=False, default=str), now_iso()),
+        "INSERT INTO scores (job_id, username, score, breakdown_json, scored_at) VALUES (?, ?, ?, ?, ?) "
+        "ON CONFLICT(job_id, username) DO UPDATE SET score = excluded.score, "
+        "breakdown_json = excluded.breakdown_json, scored_at = excluded.scored_at",
+        (job_id, user, float(score), json.dumps(breakdown, ensure_ascii=False, default=str), now_iso()),
     )
     conn.commit()
 
 
-def get_score(conn: Database, job_id: str) -> dict[str, Any] | None:
+def get_score(conn: Database, job_id: str, user: str = DEFAULT_USER) -> dict[str, Any] | None:
     """{'score', 'breakdown', 'scored_at'} ou None."""
-    row = conn.execute("SELECT * FROM scores WHERE job_id = ?", (job_id,)).fetchone()
+    row = conn.execute("SELECT * FROM scores WHERE job_id = ? AND username = ?", (job_id, user)).fetchone()
     if not row:
         return None
     return {"score": row["score"], "breakdown": json.loads(row["breakdown_json"]), "scored_at": row["scored_at"]}
 
 
 # ---------- applications ----------
-def set_application(conn: Database, job_id: str, status: str, notes: str | None = None) -> None:
-    """Met à jour le statut (et les notes si fournies) d'une candidature."""
+def set_application(conn: Database, job_id: str, status: str, notes: str | None = None,
+                    user: str = DEFAULT_USER) -> None:
+    """Met à jour le statut (et les notes si fournies) d'une candidature de `user`."""
     if status not in STATUSES:
         raise ValueError(f"Statut inconnu : {status!r} (attendu : {', '.join(STATUSES)})")
-    current = get_application(conn, job_id)
+    current = get_application(conn, job_id, user)
     notes = current["notes"] if notes is None else notes
     conn.execute(
-        "INSERT INTO applications (job_id, status, notes, updated_at) VALUES (?, ?, ?, ?) "
-        "ON CONFLICT(job_id) DO UPDATE SET status = excluded.status, notes = excluded.notes, "
+        "INSERT INTO applications (job_id, username, status, notes, updated_at) VALUES (?, ?, ?, ?, ?) "
+        "ON CONFLICT(job_id, username) DO UPDATE SET status = excluded.status, notes = excluded.notes, "
         "updated_at = excluded.updated_at",
-        (job_id, status, notes, now_iso()),
+        (job_id, user, status, notes, now_iso()),
     )
     conn.commit()
 
 
-def get_application(conn: Database, job_id: str) -> dict[str, Any]:
-    """Statut et notes d'une offre (« à voir » par défaut)."""
-    row = conn.execute("SELECT * FROM applications WHERE job_id = ?", (job_id,)).fetchone()
+def get_application(conn: Database, job_id: str, user: str = DEFAULT_USER) -> dict[str, Any]:
+    """Statut et notes d'une offre pour `user` (« à voir » par défaut)."""
+    row = conn.execute("SELECT * FROM applications WHERE job_id = ? AND username = ?", (job_id, user)).fetchone()
     if row:
         return dict(row)
-    return {"job_id": job_id, "status": DEFAULT_STATUS, "notes": "", "updated_at": None}
+    return {"job_id": job_id, "username": user, "status": DEFAULT_STATUS, "notes": "", "updated_at": None}
+
+
+# ---------- job_users (qui a trouvé quelle offre) ----------
+def link_jobs_to_user(conn: Database, job_ids: Iterable[str], user: str) -> int:
+    """Rattache des offres à une personne. Renvoie le nombre d'offres nouvelles pour elle."""
+    added = 0
+    for job_id in job_ids:
+        if conn.execute("SELECT 1 FROM job_users WHERE job_id = ? AND username = ?", (job_id, user)).fetchone():
+            continue
+        conn.execute("INSERT INTO job_users (job_id, username, first_seen) VALUES (?, ?, ?)", (job_id, user, now_iso()))
+        added += 1
+    conn.commit()
+    return added
+
+
+def user_job_ids(conn: Database, user: str) -> set[str]:
+    """Offres trouvées par une personne."""
+    return {r[0] for r in conn.execute("SELECT job_id FROM job_users WHERE username = ?", (user,)).fetchall()}
 
 
 # ---------- api_cache (copie du cache disque, utile quand le disque est temporaire) ----------
@@ -387,6 +453,15 @@ def save_cached_response(conn: Database, key: str, payload: dict[str, Any]) -> N
         (key, json.dumps(payload, ensure_ascii=False), now_iso()),
     )
     conn.commit()
+
+
+def needs_scoring(conn: Database, user: str) -> bool:
+    """True si `user` a des offres analysées par l'IA mais aucun score (à recalculer)."""
+    row = conn.execute(
+        "SELECT 1 FROM job_users ju JOIN extractions e ON e.job_id = ju.job_id "
+        "LEFT JOIN scores s ON s.job_id = ju.job_id AND s.username = ju.username "
+        "WHERE ju.username = ? AND s.job_id IS NULL LIMIT 1", (user,)).fetchone()
+    return row is not None
 
 
 # ---------- settings ----------

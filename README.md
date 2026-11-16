@@ -21,6 +21,8 @@ Sans `DATABASE_URL`, l'app utilise SQLite, qui est effacé à chaque redémarrag
 offres, statuts, notes, compteur de quota et cache JSearch sont conservés. Les tables sont créées automatiquement.
 
 ## Réglages
+- Utilisateurs (Octave, Marilou, Alex, liste dans `config.yaml`) : chacun a ses critères, ses offres, ses scores et
+  ses candidatures. Choix dans la barre latérale ou par l'URL (`?user=Marilou`).
 - Page **Recherche** : intitulés, pays (toute l'Europe), mois de début, durées et autres critères, enregistrés en base.
 - `config.yaml` : fournisseur IA (`llm_provider`, `model`), intitulés par défaut, plafond de quota JSearch (180/200).
 - `profile.yaml` : ton profil (pays, durée, dates, compétences, langues, poids du score).

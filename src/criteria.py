@@ -114,9 +114,16 @@ def defaults(profile: config.Profile, cfg: config.AppConfig) -> SearchCriteria:
                           min_stipend_eur=profile.min_stipend_eur)
 
 
-def load(conn: db.Database, profile: config.Profile, cfg: config.AppConfig) -> SearchCriteria:
-    """Critères enregistrés, sinon ceux par défaut."""
-    raw = db.get_setting(conn, SETTINGS_KEY)
+def _key(base: str, user: str) -> str:
+    return f"{base}:{user}"
+
+
+def load(conn: db.Database, profile: config.Profile, cfg: config.AppConfig,
+         user: str = db.DEFAULT_USER) -> SearchCriteria:
+    """Critères enregistrés de `user`, sinon ceux par défaut."""
+    raw = db.get_setting(conn, _key(SETTINGS_KEY, user))
+    if raw is None and user == db.DEFAULT_USER:
+        raw = db.get_setting(conn, SETTINGS_KEY)  # critères enregistrés avant l'ajout des utilisateurs
     if raw:
         try:
             return SearchCriteria.model_validate_json(raw)
@@ -125,8 +132,8 @@ def load(conn: db.Database, profile: config.Profile, cfg: config.AppConfig) -> S
     return defaults(profile, cfg)
 
 
-def save(conn: db.Database, criteria: SearchCriteria) -> None:
-    db.set_setting(conn, SETTINGS_KEY, criteria.model_dump_json())
+def save(conn: db.Database, criteria: SearchCriteria, user: str = db.DEFAULT_USER) -> None:
+    db.set_setting(conn, _key(SETTINGS_KEY, user), criteria.model_dump_json())
 
 
 # ---------- Utilisation ----------
@@ -136,27 +143,32 @@ def build_queries(criteria: SearchCriteria) -> list[config.SearchQuery]:
             for t in criteria.titles for c in criteria.countries for p in range(1, criteria.pages + 1)]
 
 
-def searched_countries(conn: db.Database) -> list[str]:
-    """Pays déjà recherchés (toutes recherches confondues)."""
-    raw = db.get_setting(conn, HISTORY_KEY)
+def searched_countries(conn: db.Database, user: str = db.DEFAULT_USER) -> list[str]:
+    """Pays déjà recherchés par `user` (toutes ses recherches confondues)."""
+    raw = db.get_setting(conn, _key(HISTORY_KEY, user))
+    if raw is None and user == db.DEFAULT_USER:
+        raw = db.get_setting(conn, HISTORY_KEY)  # historique d'avant l'ajout des utilisateurs
     if raw:
         return json.loads(raw)
-    # Pas encore d'historique (offres collectées avant son ajout) : pays des offres déjà en base.
+    # Pas encore d'historique : pays des offres déjà trouvées par cette personne.
     by_code = {code: name for name, (code, _) in EUROPE.items()}
-    codes = {str(r[0]).lower() for r in conn.execute("SELECT DISTINCT job_country FROM jobs").fetchall() if r[0]}
+    rows = conn.execute("SELECT DISTINCT j.job_country FROM jobs j JOIN job_users ju ON ju.job_id = j.job_id "
+                        "WHERE ju.username = ?", (user,)).fetchall()
+    codes = {str(r[0]).lower() for r in rows if r[0]}
     return [by_code[c] for c in sorted(codes) if c in by_code]
 
 
-def record_searched(conn: db.Database, countries: list[str]) -> None:
-    """Ajoute des pays à l'historique des recherches."""
-    known = searched_countries(conn)
-    db.set_setting(conn, HISTORY_KEY, json.dumps(known + [c for c in countries if c not in known]))
+def record_searched(conn: db.Database, countries: list[str], user: str = db.DEFAULT_USER) -> None:
+    """Ajoute des pays à l'historique des recherches de `user`."""
+    known = searched_countries(conn, user)
+    db.set_setting(conn, _key(HISTORY_KEY, user), json.dumps(known + [c for c in countries if c not in known]))
 
 
-def effective_profile(conn: db.Database, profile: config.Profile, criteria: SearchCriteria) -> config.Profile:
-    """Profil utilisé pour le score : critères cochés + tous les pays déjà recherchés.
+def effective_profile(conn: db.Database, profile: config.Profile, criteria: SearchCriteria,
+                      user: str = db.DEFAULT_USER) -> config.Profile:
+    """Profil utilisé pour le score de `user` : critères cochés + tous les pays qu'il a déjà recherchés.
     Changer les pays d'une nouvelle recherche ne fait donc pas disparaître les offres des recherches précédentes."""
-    return apply_to_profile(profile, criteria, extra_countries=searched_countries(conn))
+    return apply_to_profile(profile, criteria, extra_countries=searched_countries(conn, user))
 
 
 def apply_to_profile(profile: config.Profile, criteria: SearchCriteria,

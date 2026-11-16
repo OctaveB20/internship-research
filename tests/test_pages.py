@@ -4,8 +4,8 @@ from streamlit.testing.v1 import AppTest
 
 from src.config import ROOT
 
-PAGES = [str(ROOT / p) for p in ("app.py", "pages/0_Accueil.py", "pages/1_Recherche.py", "pages/2_Offres.py", "pages/3_Chat.py",
-                                 "pages/4_Candidatures.py")]
+PAGES = [str(ROOT / p) for p in ("app.py", "views/0_Accueil.py", "views/1_Recherche.py", "views/2_Offres.py", "views/3_Chat.py",
+                                 "views/4_Candidatures.py")]
 RECHERCHE, OFFRES = PAGES[2], PAGES[3]
 
 
@@ -107,3 +107,19 @@ def test_quota_blocks_too_big_search(env, monkeypatch):
     at.select_slider(key="crit_pages").set_value(3).run()  # 3 × 30 × 3 = 270 > 180
     assert any("décoche des pays" in e.value for e in at.error)
     assert button(at, "Lancer la recherche").disabled
+
+
+def test_user_switch_isolates_offers(env):
+    at = AppTest.from_file(RECHERCHE, default_timeout=30).run()
+    assert at.selectbox(key="user_sidebar").value == "Octave"
+    launch(at)  # Octave : France + Allemagne
+    at.selectbox(key="user_recherche").set_value("Marilou").run()
+    assert at.selectbox(key="user_sidebar").value == "Marilou"
+    at.text_input(key="crit_titles").input("Praktikum Controlling").run()
+    button(at, "Aucun").click().run()
+    at.checkbox(key="c_Germany").check().run()
+    launch(at)
+    assert "10 nouvelle(s) offre(s) pour Marilou" in at.success[0].value
+    # Retour à Octave : ses critères reviennent
+    at.selectbox(key="user_sidebar").set_value("Octave").run()
+    assert at.text_input(key="crit_titles").value.startswith("stage contrôle de gestion")

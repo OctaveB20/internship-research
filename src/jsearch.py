@@ -224,9 +224,10 @@ def _result(payload: dict[str, Any], source: str) -> SearchResult:
 
 
 def collect(conn: db.Database, queries: list[config.SearchQuery], cfg: config.AppConfig,
-            **kwargs: Any) -> CollectSummary:
-    """Lance les requêtes, enregistre les offres en base. Une erreur n'arrête que sa requête ;
-    un quota atteint arrête la collecte."""
+            user: str = db.DEFAULT_USER, **kwargs: Any) -> CollectSummary:
+    """Lance les requêtes, enregistre les offres en base et les rattache à `user`.
+    `new` = offres nouvelles pour cette personne. Une erreur n'arrête que sa requête ; un quota atteint
+    arrête la collecte."""
     summary = CollectSummary()
     usage_before = db.get_api_usage(conn)
     cursors: dict[tuple[str, str], str | None] = {}  # curseur de la page suivante, par (intitulé, pays)
@@ -248,7 +249,8 @@ def collect(conn: db.Database, queries: list[config.SearchQuery], cfg: config.Ap
                 cursors[key] = None
                 continue
             cursors[key] = res.next_cursor
-            new = db.upsert_jobs(conn, res.jobs)
+            db.upsert_jobs(conn, res.jobs)
+            new = db.link_jobs_to_user(conn, [j["job_id"] for j in res.jobs], user)
             summary.cache_hits += res.source == "cache"
             summary.fetched += len(res.jobs)
             summary.new += new

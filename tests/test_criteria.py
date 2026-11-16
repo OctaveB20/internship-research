@@ -138,4 +138,6 @@ def test_previously_searched_countries_are_not_eliminated(conn, base):
 def test_history_seeded_from_jobs_in_base(conn):
     from src import db
     db.upsert_jobs(conn, [make_job("a", job_country="BE"), make_job("b", job_country="NL"), make_job("c", job_country="US")])
-    assert crit.searched_countries(conn) == ["Belgium", "Netherlands"]
+    db.link_jobs_to_user(conn, ["a", "b", "c"], "Octave")
+    assert crit.searched_countries(conn, "Octave") == ["Belgium", "Netherlands"]
+    assert crit.searched_countries(conn, "Marilou") == []

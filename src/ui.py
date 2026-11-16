@@ -24,10 +24,10 @@ def require_password() -> None:
 
 
 @st.cache_resource(show_spinner=False)
-def _shared_postgres(url: str) -> db.Database:
+def _shared_postgres(url: str, owner: str) -> db.Database:
     """Une seule connexion Postgres pour toute l'app (évite d'en ouvrir une à chaque clic)."""
     conn = db.connect(url=url)
-    db.init_db(conn)
+    db.init_db(conn, owner)
     return conn
 
 
@@ -44,16 +44,16 @@ def _postgres_error(e: Exception) -> str:
     return f"Connexion à la base Postgres impossible ({type(e).__name__} : {first_line[:200]}). {hint}"
 
 
-def get_connection() -> db.Database:
+def get_connection(owner: str = db.DEFAULT_USER) -> db.Database:
     """Postgres si DATABASE_URL est défini (connexion partagée, recréée si elle a été coupée), sinon SQLite."""
     url = config.database_url()
     if not url:
         conn = db.connect()
-        db.init_db(conn)
+        db.init_db(conn, owner)
         return conn
     for attempt in range(2):
         try:
-            conn = _shared_postgres(url)
+            conn = _shared_postgres(url, owner)
             conn.execute("SELECT 1")
             return conn
         except Exception as e:  # connexion coupée par le serveur après inactivité : on en rouvre une
@@ -95,6 +95,29 @@ def field(label: str, value: object) -> None:
                 unsafe_allow_html=True)
 
 
+# ---------- Utilisateur courant ----------
+def current_user(cfg: config.AppConfig) -> str:
+    """Personne choisie (mémorisée pendant la session et dans l'URL : ?user=Marilou)."""
+    ss = st.session_state
+    if ss.get("user") not in cfg.users:
+        wanted = st.query_params.get("user")
+        ss.user = wanted if wanted in cfg.users else cfg.users[0]
+    return ss.user
+
+
+def user_selector(cfg: config.AppConfig, where=None, key: str = "user_sidebar", label: str = "Utilisateur",
+                  width: int | str = "stretch") -> str:
+    """Liste déroulante des utilisateurs, synchronisée avec les autres sélecteurs de la page."""
+    st.session_state[key] = current_user(cfg)
+
+    def _changed() -> None:
+        st.session_state.user = st.session_state[key]
+        st.query_params["user"] = st.session_state.user
+
+    (where or st).selectbox(label, cfg.users, key=key, on_change=_changed, width=width)
+    return current_user(cfg)
+
+
 def setup_page(title: str, icon: str = ":material/target:", subtitle: str = ""
                ) -> tuple[db.Database, config.AppConfig, config.Profile]:
     """À appeler en tête de chaque page. Renvoie (connexion, config, profil)."""
@@ -108,8 +131,14 @@ def setup_page(title: str, icon: str = ":material/target:", subtitle: str = ""
     except Exception as e:  # YAML invalide : message lisible
         st.error(f"config.yaml ou profile.yaml invalide : {e}")
         st.stop()
-    conn = get_connection()
-    profile = criteria.effective_profile(conn, profile, criteria.load(conn, profile, cfg))  # critères de la page Recherche
+    conn = get_connection(cfg.users[0])
+    with st.sidebar:
+        user = user_selector(cfg, label="Utilisateur")
+    # critères de la page Recherche de cette personne
+    profile = criteria.effective_profile(conn, profile, criteria.load(conn, profile, cfg, user), user)
+    if db.needs_scoring(conn, user):  # ex. juste après la migration multi-utilisateur : scores recalculés (gratuit)
+        from src import scoring
+        scoring.score_all(conn, profile, user)
     with st.sidebar:
         if config.dev_mode():
             st.info("Mode dev : offres lues dans les fixtures, aucun appel JSearch.")

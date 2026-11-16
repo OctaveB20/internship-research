@@ -10,7 +10,7 @@ import pytest
 from src import config, db
 
 TEST_PG_URL = os.getenv("TEST_DATABASE_URL", "")
-TABLES = "applications, scores, extractions, api_usage, api_cache, settings, jobs"
+TABLES = "applications, applications_old, scores, extractions, job_users, api_usage, api_cache, settings, jobs"
 
 
 def reset_postgres(url: str) -> None:

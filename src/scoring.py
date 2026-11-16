@@ -251,12 +251,13 @@ def score_job(ex: JobExtraction, job: dict[str, Any], p: config.Profile) -> Scor
     return ScoreResult(0.0 if reasons else raw, bool(reasons), reasons, components, matched, missing, raw)
 
 
-def score_all(conn: db.Database, profile: config.Profile) -> int:
-    """(Re)calcule le score de toutes les offres extraites. Gratuit et instantané. Renvoie le nombre scoré."""
-    rows = conn.execute("SELECT j.*, e.extracted_json FROM jobs j JOIN extractions e ON e.job_id = j.job_id").fetchall()
+def score_all(conn: db.Database, profile: config.Profile, user: str = db.DEFAULT_USER) -> int:
+    """(Re)calcule le score des offres extraites de `user`. Gratuit et instantané. Renvoie le nombre scoré."""
+    rows = conn.execute("SELECT j.*, e.extracted_json FROM jobs j JOIN extractions e ON e.job_id = j.job_id "
+                        "JOIN job_users ju ON ju.job_id = j.job_id AND ju.username = ?", (user,)).fetchall()
     for row in rows:
         job = dict(row)
         ex = JobExtraction.model_validate_json(job.pop("extracted_json"))
         result = score_job(ex, job, profile)
-        db.save_score(conn, job["job_id"], result.score, result.breakdown())
+        db.save_score(conn, job["job_id"], result.score, result.breakdown(), user)
     return len(rows)

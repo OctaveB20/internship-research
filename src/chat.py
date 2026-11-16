@@ -44,7 +44,8 @@ correspond, dis-le simplement.
 - Cite chaque offre avec son titre, son entreprise et son score (ex. « Stage FP&A — Lumen Capital Partners, 100/100 »).
 - Les offres éliminées (score 0) sont masquées par défaut ; explique la raison d'élimination si on te la demande."""
 
-def search_jobs(conn: db.Database, filters: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+def search_jobs(conn: db.Database, filters: dict[str, Any] | None = None,
+                user: str = db.DEFAULT_USER) -> list[dict[str, Any]]:
     """Requête SQL paramétrée construite à partir de filtres connus (les autres clés sont ignorées)."""
     f = {k: v for k, v in (filters or {}).items() if v not in (None, "")}
     ex = lambda key: conn.json_text("e.extracted_json", key)  # noqa: E731
@@ -90,12 +91,14 @@ def search_jobs(conn: db.Database, filters: dict[str, Any] | None = None) -> lis
         f"{ex('domain')} AS domain, {num('stipend_monthly_eur', integer=False)} AS stipend_eur, "
         f"{ex('summary_fr')} AS summary, s.score, {conn.json_text('s.breakdown_json', 'reasons')} AS elimination, "
         "COALESCE(a.status, ?) AS status, j.job_apply_link AS apply_link "
-        "FROM jobs j LEFT JOIN extractions e ON e.job_id = j.job_id LEFT JOIN scores s ON s.job_id = j.job_id "
-        "LEFT JOIN applications a ON a.job_id = j.job_id"
+        "FROM jobs j JOIN job_users ju ON ju.job_id = j.job_id AND ju.username = ? "
+        "LEFT JOIN extractions e ON e.job_id = j.job_id "
+        "LEFT JOIN scores s ON s.job_id = j.job_id AND s.username = ? "
+        "LEFT JOIN applications a ON a.job_id = j.job_id AND a.username = ?"
         + (" WHERE " + " AND ".join(where) if where else "")
         + " ORDER BY s.score IS NULL, s.score DESC LIMIT ?"
     )
-    rows = conn.execute(sql, [db.DEFAULT_STATUS, *params, limit]).fetchall()
+    rows = conn.execute(sql, [db.DEFAULT_STATUS, user, user, user, *params, limit]).fetchall()
     out = []
     for r in rows:
         d = dict(r)
@@ -104,13 +107,13 @@ def search_jobs(conn: db.Database, filters: dict[str, Any] | None = None) -> lis
     return out
 
 
-def get_job(conn: db.Database, job_id: str) -> dict[str, Any]:
-    """Offre complète, ou une erreur si l'identifiant est inconnu."""
+def get_job(conn: db.Database, job_id: str, user: str = db.DEFAULT_USER) -> dict[str, Any]:
+    """Offre complète de `user`, ou une erreur si l'identifiant est inconnu."""
     job = db.get_job(conn, job_id)
-    if not job:
+    if not job or job_id not in db.user_job_ids(conn, user):
         return {"error": f"Aucune offre avec l'identifiant {job_id!r}."}
-    score = db.get_score(conn, job_id)
-    app = db.get_application(conn, job_id)
+    score = db.get_score(conn, job_id, user)
+    app = db.get_application(conn, job_id, user)
     desc = job.get("job_description") or ""
     return {
         "job_id": job_id, "title": job["job_title"], "employer": job["employer_name"],
@@ -123,17 +126,18 @@ def get_job(conn: db.Database, job_id: str) -> dict[str, Any]:
     }
 
 
-def run_tool(conn: db.Database, name: str, args: dict[str, Any]) -> Any:
-    """Exécute un des 2 outils autorisés."""
+def run_tool(conn: db.Database, name: str, args: dict[str, Any], user: str = db.DEFAULT_USER) -> Any:
+    """Exécute un des 2 outils autorisés, limités aux offres de `user`."""
     if name == "search_jobs":
-        return search_jobs(conn, args.get("filters", args))  # tolère {"filters": {...}} ou les filtres à plat
+        return search_jobs(conn, args.get("filters", args), user)  # tolère {"filters": {...}} ou les filtres à plat
     if name == "get_job":
-        return get_job(conn, str(args.get("job_id", "")))
+        return get_job(conn, str(args.get("job_id", "")), user)
     return {"error": f"Outil inconnu : {name}"}
 
 
 def ask_llm(conn: db.Database, cfg: config.AppConfig, history: list[dict[str, str]],
-            client: llm.LLMClient | None = None) -> llm.ChatResult:
-    """Appel IA (peut être payant) : répond au dernier message de `history` en interrogeant la base."""
+            client: llm.LLMClient | None = None, user: str = db.DEFAULT_USER) -> llm.ChatResult:
+    """Appel IA (peut être payant) : répond au dernier message de `history` en interrogeant les offres de `user`."""
     client = client or llm.make_client(cfg)
-    return client.chat(SYSTEM_PROMPT, history, TOOLS, lambda name, args: run_tool(conn, name, args))
+    system = f"{SYSTEM_PROMPT}\n- Tu parles avec {user} : les outils ne renvoient que ses offres, scores et statuts."
+    return client.chat(system, history, TOOLS, lambda name, args: run_tool(conn, name, args, user))

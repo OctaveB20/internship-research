@@ -75,6 +75,6 @@ def filter_offers(rows: Iterable[dict[str, Any]], *, min_score: float = 0, count
     return out
 
 
-def load_offers(conn) -> list[dict[str, Any]]:
-    """Toutes les offres, triées par score et dédoublonnées (entreprise, titre, ville)."""
-    return [flatten(r) for r in db.dedupe_jobs(db.list_jobs_overview(conn))]
+def load_offers(conn, user: str | None = None) -> list[dict[str, Any]]:
+    """Offres (de `user` si précisé), triées par score et dédoublonnées (entreprise, titre, ville)."""
+    return [flatten(r) for r in db.dedupe_jobs(db.list_jobs_overview(conn, user))]

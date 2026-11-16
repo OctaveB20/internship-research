@@ -10,6 +10,9 @@ price_input_per_mtok: 0
 price_output_per_mtok: 0
 
 quota_soft_limit: 180
+
+# Personnes qui utilisent l'app (chacune voit ses offres). La 1re reçoit les offres trouvées avant.
+users: [Octave, Marilou, Alex]
 # Valeurs pré-remplies la première fois dans la page Recherche (ensuite, ce sont les critères enregistrés).
 date_posted: week
 default_titles: ["stage contrôle de gestion", "stage FP&A", "finance intern"]
