@@ -1,4 +1,6 @@
-# Mon profil : critères de matching utilisés par src/scoring.py (valeurs d'exemple).
+# Profils utilisés par le score (src/scoring.py).
+# Les valeurs ci-dessous sont communes à tout le monde ; la section `users` les remplace pour une personne.
+# Pays, mois de début, durées, villes et gratification se règlent dans la page Recherche (enregistrés en base).
 target_countries: [France, Germany]
 target_cities: [Paris]          # bonus si match, pas éliminatoire
 remote_ok: true
@@ -10,3 +12,22 @@ skills: [Excel, Python, Power BI, SQL, Streamlit, Copilot Studio]
 languages: {French: native, English: fluent, German: basic}
 min_stipend_eur: null
 weights: {location: 15, duration: 20, start_date: 20, skills: 25, languages: 10, domain: 10}
+
+users:
+  Octave:  # d'après le CV 2026 (Excelia / OTH Regensburg, stage Finance/Controlling chez Athlon)
+    domains: [contrôle de gestion, controlling, FP&A, finance]
+    skills:
+      # Écrites sur le CV
+      - Python                  # app de rapprochement, automatisations, sites
+      - Microsoft Copilot       # automatisation de tâches par l'IA
+      - IA                      # « efficient use of AI », projets d'automatisation
+      - Automatisation
+      - Clôture mensuelle       # « assist in monthly closing process »
+      - Rapprochement           # « reconciliation app »
+      - Streamlit
+      - GitHub
+      - Supabase
+      - API
+      # Pas écrite sur le CV, mais utilisée en contrôle de gestion : à retirer si ce n'est pas le cas
+      - Excel
+    languages: {French: native, English: bilingual, Spanish: intermediate, German: basic}  # allemand : à confirmer

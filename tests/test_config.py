@@ -54,3 +54,21 @@ def test_dev_mode_and_secrets(monkeypatch):
 ])
 def test_normaliser_url(raw, password, expected):
     assert config.normaliser_url(raw, password) == expected
+
+
+def test_profile_per_user(tmp_path):
+    p = tmp_path / "profile.yaml"
+    p.write_text("target_countries: [France]\nduration_months: {min: 5, max: 6}\navailable_from: 2027-01-05\n"
+                 "latest_start: 2027-03-31\nskills: [Excel]\nusers:\n  Marilou:\n    skills: [SAP, Excel]\n",
+                 encoding="utf-8")
+    assert config.load_profile(p).skills == ["Excel"]
+    assert config.load_profile(p, user="Marilou").skills == ["SAP", "Excel"]
+    assert config.load_profile(p, user="Alex").skills == ["Excel"]  # pas de section : valeurs communes
+    assert config.profile_users(p) == ["Marilou"]
+
+
+def test_octave_profile_from_cv():
+    octave = config.load_profile(user="Octave")
+    assert {"Python", "Microsoft Copilot", "Streamlit", "Clôture mensuelle"} <= set(octave.skills)
+    assert "Power BI" not in octave.skills and octave.languages["English"] == "bilingual"
+    assert octave.languages["Spanish"] == "intermediate"

@@ -1,6 +1,7 @@
 """Éléments communs aux pages Streamlit : config de page, mot de passe, bandeaux, connexion."""
 from __future__ import annotations
 
+import hashlib
 import hmac
 import html
 
@@ -127,18 +128,23 @@ def setup_page(title: str, icon: str = ":material/target:", subtitle: str = ""
     if config.SECRETS_ERREUR:
         st.warning(f"Secrets Streamlit illisibles : {config.SECRETS_ERREUR}")
     try:
-        cfg, profile = config.load_config(), config.load_profile()
+        cfg = config.load_config()
+        config.load_profile()  # vérifie profile.yaml dès maintenant
     except Exception as e:  # YAML invalide : message lisible
         st.error(f"config.yaml ou profile.yaml invalide : {e}")
         st.stop()
     conn = get_connection(cfg.users[0])
     with st.sidebar:
         user = user_selector(cfg, label="Utilisateur")
-    # critères de la page Recherche de cette personne
-    profile = criteria.effective_profile(conn, profile, criteria.load(conn, profile, cfg, user), user)
-    if db.needs_scoring(conn, user):  # ex. juste après la migration multi-utilisateur : scores recalculés (gratuit)
+    base = config.load_profile(user=user)  # profil de cette personne (profile.yaml, section users)
+    # + critères de sa page Recherche
+    profile = criteria.effective_profile(conn, base, criteria.load(conn, base, cfg, user), user)
+    signature = hashlib.sha256(profile.model_dump_json().encode()).hexdigest()[:16]
+    if db.needs_scoring(conn, user) or db.get_setting(conn, f"profile_signature:{user}") != signature:
+        # profil modifié (ex. compétences ajoutées) ou scores manquants : recalcul gratuit et instantané
         from src import scoring
         scoring.score_all(conn, profile, user)
+        db.set_setting(conn, f"profile_signature:{user}", signature)
     with st.sidebar:
         if config.dev_mode():
             st.info("Mode dev : offres lues dans les fixtures, aucun appel JSearch.")

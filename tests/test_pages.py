@@ -123,3 +123,17 @@ def test_user_switch_isolates_offers(env):
     # Retour à Octave : ses critères reviennent
     at.selectbox(key="user_sidebar").set_value("Octave").run()
     assert at.text_input(key="crit_titles").value.startswith("stage contrôle de gestion")
+
+
+def test_profile_change_triggers_rescoring(env, monkeypatch):
+    from src import config, db
+    at = AppTest.from_file(RECHERCHE, default_timeout=30).run()
+    launch(at)
+    with db.connect() as c:
+        before = db.get_setting(c, "profile_signature:Octave")
+    original = config.load_profile
+    monkeypatch.setattr(config, "load_profile", lambda path=config.PROFILE_PATH, user=None:
+                        original(path, user).model_copy(update={"skills": ["SAP"]}))
+    AppTest.from_file(OFFRES, default_timeout=30).run()
+    with db.connect() as c:
+        assert db.get_setting(c, "profile_signature:Octave") != before

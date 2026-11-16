@@ -117,3 +117,18 @@ def test_fixture_pipeline_eliminates_expected_offers(conn):
                           "NeoLedger", "Isarwerk Energie", "Kaltenberg Logistics", "Tegernsee Capital",
                           "Alpenblick Hotels", "Donaustahl GmbH", "Fertois Composites"}
     assert rows[0]["employer_name"] == "Lumen Capital Partners"
+
+
+@pytest.mark.parametrize("required", ["Clôtures mensuelles", "month-end closing", "Monatsabschluss",
+                                      "Rapprochements bancaires", "Kontenabstimmung", "IA générative", "KI",
+                                      "Microsoft 365 Copilot", "Copilot Studio", "Git", "REST API", "Python 3"])
+def test_skill_variants_match_octave_profile(required):
+    octave = config.load_profile(user="Octave")
+    r = scoring.score_job(ex(required_skills=[required]), JOB, octave)
+    assert r.skills_matched == [required], required
+
+
+def test_skills_not_on_octave_cv_are_missing():
+    octave = config.load_profile(user="Octave")
+    r = scoring.score_job(ex(required_skills=["Power BI", "SQL", "SAP", "Excel"]), JOB, octave)
+    assert r.skills_missing == ["Power BI", "SQL", "SAP"] and r.skills_matched == ["Excel"]

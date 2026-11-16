@@ -170,6 +170,15 @@ def load_config(path: Path = CONFIG_PATH) -> AppConfig:
     return AppConfig.model_validate(_read_yaml(path))
 
 
-def load_profile(path: Path = PROFILE_PATH) -> Profile:
-    """Charge et valide profile.yaml."""
-    return Profile.model_validate(_read_yaml(path))
+def load_profile(path: Path = PROFILE_PATH, user: str | None = None) -> Profile:
+    """Charge et valide profile.yaml : valeurs communes, remplacées par la section `users.<user>` si elle existe."""
+    data = _read_yaml(path)
+    overrides = data.pop("users", None) or {}
+    if user and isinstance(overrides.get(user), dict):
+        data = {**data, **overrides[user]}
+    return Profile.model_validate(data)
+
+
+def profile_users(path: Path = PROFILE_PATH) -> list[str]:
+    """Personnes qui ont une section dédiée dans profile.yaml."""
+    return list((_read_yaml(path).get("users") or {}).keys())

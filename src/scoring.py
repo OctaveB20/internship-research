@@ -40,8 +40,24 @@ LEVELS = {
     "basic": 1, "notions": 1, "a2": 1, "a1": 1, "scolaire": 1, "grundkenntnisse": 1,
 }
 DEFAULT_REQUIRED_LEVEL = 3  # langue demandée sans niveau précisé
-SKILL_ALIASES = {"ms excel": "excel", "microsoft excel": "excel", "excel avance": "excel", "powerbi": "power bi",
-                 "microsoft power bi": "power bi", "ms office": "office", "microsoft office": "office"}
+# Formulations d'une même compétence (après normalisation : minuscules, sans accents ni ponctuation).
+SKILL_ALIASES = {
+    "ms excel": "excel", "microsoft excel": "excel", "excel avance": "excel", "advanced excel": "excel",
+    "powerbi": "power bi", "microsoft power bi": "power bi", "ms office": "office", "microsoft office": "office",
+    "python 3": "python", "programmation python": "python",
+    "microsoft copilot": "copilot", "m365 copilot": "copilot", "microsoft 365 copilot": "copilot",
+    "ia": "ai", "ki": "ai", "intelligence artificielle": "ai", "artificial intelligence": "ai",
+    "kunstliche intelligenz": "ai", "ia generative": "ai", "generative ai": "ai", "genai": "ai",
+    "automatisation": "automation", "automatisierung": "automation", "process automation": "automation",
+    "automatisation des processus": "automation", "rpa": "automation",
+    "cloture mensuelle": "closing", "clotures mensuelles": "closing", "cloture": "closing", "clotures": "closing",
+    "monthly closing": "closing", "month end closing": "closing", "month end close": "closing",
+    "monatsabschluss": "closing", "monatsabschlusse": "closing", "closing": "closing",
+    "rapprochement": "reconciliation", "rapprochements": "reconciliation", "rapprochement bancaire": "reconciliation",
+    "rapprochements bancaires": "reconciliation", "account reconciliation": "reconciliation",
+    "kontenabstimmung": "reconciliation", "kontenabstimmungen": "reconciliation",
+    "git": "github", "api": "api", "apis": "api", "rest api": "api", "rest apis": "api",
+}
 STOPWORDS = {"de", "d", "la", "le", "les", "des", "du", "et", "en", "l", "a", "of", "and", "the"}
 
 
