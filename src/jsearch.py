@@ -51,6 +51,7 @@ class CollectSummary:
     cache_hits: int = 0
     errors: list[str] = field(default_factory=list)
     per_query: list[dict[str, Any]] = field(default_factory=list)  # détail : intitulé, pays, page, offres, source
+    new_ids: list[str] = field(default_factory=list)  # offres nouvelles pour la personne (pour « Voir les nouvelles »)
 
 
 # ---------- Paramètres et cache ----------
@@ -230,6 +231,7 @@ def collect(conn: db.Database, queries: list[config.SearchQuery], cfg: config.Ap
     arrête la collecte."""
     summary = CollectSummary()
     usage_before = db.get_api_usage(conn)
+    known_before = db.user_job_ids(conn, user)
     cursors: dict[tuple[str, str], str | None] = {}  # curseur de la page suivante, par (intitulé, pays)
     try:
         for q in queries:
@@ -259,4 +261,5 @@ def collect(conn: db.Database, queries: list[config.SearchQuery], cfg: config.Ap
                                       "source": {"api": "JSearch", "cache": "cache du jour"}.get(res.source, "fixtures")})
     finally:
         summary.api_calls = db.get_api_usage(conn) - usage_before
+        summary.new_ids = sorted(db.user_job_ids(conn, user) - known_before)
     return summary

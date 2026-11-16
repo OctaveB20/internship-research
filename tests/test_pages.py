@@ -137,3 +137,45 @@ def test_profile_change_triggers_rescoring(env, monkeypatch):
     AppTest.from_file(OFFRES, default_timeout=30).run()
     with db.connect() as c:
         assert db.get_setting(c, "profile_signature:Octave") != before
+
+
+def test_offres_views_search_and_focus(env):
+    at = AppTest.from_file(RECHERCHE, default_timeout=30).run()
+    launch(at)
+    assert any(b.label.startswith("Voir les 20 nouvelle") for b in at.button)  # bilan + bouton gardés en session
+    at.text_input(key="crit_titles").input("stage FP&A").run()  # un autre clic : le bilan reste affiché
+    assert at.success and any(b.label.startswith("Voir les 20 nouvelle") for b in at.button)
+
+    offres = AppTest.from_file(OFFRES, default_timeout=30).run()
+    assert len(offres.dataframe[0].value) == 8 and "None" not in offres.dataframe[0].value.to_string()
+    offres.text_input(key="offers_query_Octave").input("munich").run()
+    assert set(offres.dataframe[0].value["entreprise"]) == {"Aubrac Systems", "Brennwald AG", "Helix Mobility GmbH"}
+
+    from src import db
+    with db.connect() as c:
+        kestrel = next(r["job_id"] for r in db.list_jobs_overview(c, "Octave") if r["employer_name"] == "Kestrel Fund Services")
+    focused = AppTest.from_file(OFFRES, default_timeout=30)
+    focused.session_state["focus_job"] = kestrel  # ex. clic sur « Fiche » depuis Candidatures
+    focused.run()
+    assert focused.subheader[0].value == "Corporate Finance Internship"
+    assert any("Éliminée" in e.value for e in focused.error)
+
+
+def test_candidatures_empty_state_and_cards(env):
+    from src import db
+    at = AppTest.from_file(RECHERCHE, default_timeout=30).run()
+    launch(at)
+    cand = AppTest.from_file(PAGES[5], default_timeout=30).run()
+    assert any("Aucune candidature suivie" in m.value for m in cand.markdown)
+    with db.connect() as c:
+        job_id = db.list_jobs_overview(c, "Octave")[0]["job_id"]
+        db.set_application(c, job_id, "postulé", "envoyé", "Octave")
+    cand = AppTest.from_file(PAGES[5], default_timeout=30).run()
+    assert not cand.exception and any(b.label == "Fiche" for b in cand.button)
+
+
+def test_assistant_shows_starter_questions(env, monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "x")
+    monkeypatch.setenv("GROQ_API_KEY", "x")
+    chat = AppTest.from_file(PAGES[4], default_timeout=30).run()
+    assert not chat.exception and any(b.label == "Mes 5 meilleures offres" for b in chat.button)

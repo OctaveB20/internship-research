@@ -3,7 +3,8 @@ import streamlit as st
 
 from src import chat, llm, ui
 
-conn, cfg, profile = ui.setup_page("Chat", ":material/chat:", "Pose tes questions sur les offres de la base.")
+conn, cfg, profile = ui.setup_page("Assistant", ":material/chat:", "Pose tes questions sur tes offres : il ne parle "
+                                   "que des offres de ta base, avec leur score.")
 st.caption("Exemples : « Quelles offres FP&A à Munich ? », « Les 3 meilleures offres qui commencent en janvier », "
            "« Pourquoi l'offre Kestrel est éliminée ? »")
 
@@ -22,7 +23,17 @@ if not llm.has_key(cfg):
     st.warning(f"Ajoute la clé {cfg.llm_provider.upper()}_API_KEY dans les secrets pour utiliser le chat.")
     st.stop()
 
-if question := st.chat_input("Ta question sur les offres…"):
+if not history:
+    st.markdown("<div class='scout-section'>Pour commencer</div>", unsafe_allow_html=True)
+    with st.container(horizontal=True):
+        for idea in ["Mes 5 meilleures offres", "Les offres qui commencent en février",
+                     "Quelles compétences me manquent le plus souvent ?", "Offres avec gratification ≥ 1 200 €"]:
+            if st.button(idea, key=f"idea_{idea}"):
+                st.session_state.chat_prefill = idea
+                st.rerun()
+
+question = st.chat_input("Ta question sur les offres…") or st.session_state.pop("chat_prefill", None)
+if question:
     st.chat_message("user").markdown(question)
     history.append({"role": "user", "content": question})
     with st.chat_message("assistant"), st.spinner("Je cherche dans la base…"):

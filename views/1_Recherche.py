@@ -109,15 +109,13 @@ n_req = 0 if (current is None or config.dev_mode()) else current.request_count()
 c1, c2, c3, c4 = st.columns(4)
 real_req = current.request_count() if current else 0
 with c1:
-    ui.metric_card("Requêtes JSearch ce mois", f"{q['used']} / {q['plan_limit']}")
+    ui.metric_card("Quota du mois", f"{q['used']} / {q['plan_limit']}", "requêtes JSearch utilisées")
 with c2:
-    ui.metric_card("Encore possibles", q["remaining"], f"Plafond de l'app : {q['soft_limit']} (config.yaml)")
+    ui.metric_card("Encore possibles", q["remaining"], f"plafond de l'app : {q['soft_limit']}")
 with c3:
-    ui.metric_card("Cette recherche", real_req,
-                   "Intitulés × pays × pages. 0 si déjà faite aujourd'hui (cache)."
-                   + (" En mode dev, aucune n'est envoyée." if config.dev_mode() else ""))
+    ui.metric_card("Cette recherche", real_req, "0 en mode dev" if config.dev_mode() else "intitulés × pays × pages")
 with c4:
-    ui.metric_card("Après", max(0, q["remaining"] - n_req))
+    ui.metric_card("Après", max(0, q["remaining"] - n_req), "si rien n'est en cache")
 st.progress(min(q["used"] / q["plan_limit"], 1.0))
 too_big = n_req > q["remaining"]
 if problems:
@@ -150,6 +148,7 @@ if launch and current:
     with st.status("Recherche en cours…", expanded=True) as status:
         status.write("1/3 · Collecte des offres")
         col = jsearch.collect(conn, crit.build_queries(current), run_cfg, user=user)
+        st.session_state[f"last_new_{user}"] = col.new_ids
         for err in col.errors:
             st.error(err)
         status.write(f"{col.fetched} offres reçues, {col.new} nouvelles "
@@ -174,15 +173,24 @@ if launch and current:
         status.update(label="Terminé", state="complete" if not (col.errors or ext.errors) else "error")
 
     cost_usd = ext.usage.cost_usd(cfg)
-    st.success(
+    # Bilan gardé en session : il reste affiché (avec ses boutons) après les clics suivants.
+    st.session_state[f"last_run_{user}"] = {"new": col.new, "message": (
         f"**{col.new} nouvelle(s) offre(s) pour {user}**, {ext.extracted + ext.from_reference} extraite(s)"
         + (f" (dont {ext.from_reference} depuis la référence des fixtures)" if ext.from_reference else "")
         + (f", {ext.failed} échec(s)" if ext.failed else "")
         + f", {n_scored} offre(s) scorée(s). Tokens IA : {ext.usage.input_tokens:,} en entrée, "
         f"{ext.usage.output_tokens:,} en sortie · coût estimé : "
-        + ("0 $ (offre gratuite)" if cost_usd == 0 else f"{cost_usd:.4f} $")
-    )
-    st.caption("Résultats dans la page **Offres** (menu de gauche).")
+        + ("0 $ (offre gratuite)" if cost_usd == 0 else f"{cost_usd:.4f} $"))}
+
+last_run = st.session_state.get(f"last_run_{user}")
+if last_run:
+    st.success(last_run["message"])
+    with st.container(horizontal=True):
+        if last_run["new"] and st.button(f"Voir les {last_run['new']} nouvelle(s) offre(s)", type="primary",
+                                         icon=":material/fiber_new:"):
+            ui.go("offres", offers_view_new=True)
+        if st.button("Toutes mes offres", icon=":material/work:"):
+            ui.go("offres")
 
 st.divider()
 # ---------- Test réel de l'IA ----------

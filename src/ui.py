@@ -76,7 +76,7 @@ h2, h3 {letter-spacing: -0.01em;}
 }
 /* Cartes d'indicateurs */
 .scout-stat {border: 1px solid var(--scout-border, rgba(127,127,127,.22)); border-radius: 0.75rem;
-             padding: 0.85rem 1rem; height: 100%; margin-bottom: 0.75rem;}
+             padding: 0.85rem 1rem; min-height: 6.4rem; margin-bottom: 0.75rem;}
 .scout-stat .label {font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.62;}
 .scout-stat .value {font-size: 1.7rem; font-weight: 650; line-height: 1.25; margin-top: 0.15rem;}
 .scout-stat .hint {font-size: 0.8rem; opacity: 0.6; margin-top: 0.1rem;}
@@ -85,9 +85,9 @@ h2, h3 {letter-spacing: -0.01em;}
 .scout-value {font-size: 0.97rem; font-weight: 500; margin-bottom: 0.8rem;}
 /* En-tête de page */
 .scout-kicker {font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.55; margin-bottom: -0.6rem;}
-/* Barre latérale */
-[data-testid="stSidebar"] .scout-user {font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em;
-                                       opacity: 0.6; margin: 0.4rem 0 -0.4rem;}
+/* Petits titres de section */
+.scout-section {font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.6;
+                margin: 0.6rem 0 0.2rem;}
 </style>
 """
 
@@ -111,6 +111,34 @@ def field(label: str, value: object) -> None:
     shown = html.escape(str(value)) if value not in (None, "", []) else "<span style='opacity:.5'>non précisé</span>"
     st.markdown(f"<div class='scout-label'>{html.escape(label)}</div><div class='scout-value'>{shown}</div>",
                 unsafe_allow_html=True)
+
+
+STATUS_COLORS = {"à voir": "gray", "intéressant": "blue", "postulé": "violet", "entretien": "orange",
+                 "refusé": "red", "offre": "green"}
+
+
+# ---------- Navigation entre les pages ----------
+PAGE_FILES = {"accueil": "views/0_Accueil.py", "recherche": "views/1_Recherche.py", "offres": "views/2_Offres.py",
+              "assistant": "views/3_Chat.py", "candidatures": "views/4_Candidatures.py"}
+
+
+def go(page: str, **state: object) -> None:
+    """Ouvre une autre page, en lui transmettant des valeurs (ex. l'offre à afficher)."""
+    st.session_state.update(state)
+    try:
+        st.switch_page(PAGE_FILES[page])
+    except st.errors.StreamlitAPIException:  # page lancée seule (tests) : pas de navigation possible
+        st.rerun()
+
+
+def open_offer(job_id: str) -> None:
+    """Affiche la fiche d'une offre dans la page Offres."""
+    go("offres", focus_job=job_id)
+
+
+def ask_assistant(question: str) -> None:
+    """Ouvre l'assistant avec une question déjà posée."""
+    go("assistant", chat_prefill=question)
 
 
 # ---------- Utilisateur courant ----------
@@ -153,8 +181,7 @@ def setup_page(title: str, icon: str = ":material/target:", subtitle: str = "", 
         st.stop()
     conn = get_connection(cfg.users[0])
     with st.sidebar:
-        st.markdown("<div class='scout-user'>Profil actif</div>", unsafe_allow_html=True)
-        user = user_selector(cfg, label="Utilisateur", label_visibility="collapsed")
+        user = user_selector(cfg, label="Profil actif")
     base = questionnaire.user_profile(conn, user)  # profile.yaml + réponses au questionnaire de l'accueil
     # + critères de sa page Recherche
     profile = criteria.effective_profile(conn, base, criteria.load(conn, base, cfg, user), user)

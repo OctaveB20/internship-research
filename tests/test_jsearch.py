@@ -277,3 +277,9 @@ def test_collect_reports_each_query(conn, cfg):
     s = jsearch.collect(conn, DEV_QUERIES, cfg, dev=True)
     assert [(q["pays"], q["offres"]) for q in s.per_query] == [("FR", 10), ("FR", 10), ("DE", 10)]
     assert sum(q["nouvelles"] for q in s.per_query) == 20
+
+
+def test_collect_returns_new_ids(conn, cfg):
+    s1 = jsearch.collect(conn, DEV_QUERIES[:1], cfg, dev=True)
+    assert len(s1.new_ids) == 10
+    assert jsearch.collect(conn, DEV_QUERIES[:1], cfg, dev=True).new_ids == []

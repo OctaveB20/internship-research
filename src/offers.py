@@ -6,6 +6,7 @@ from typing import Any, Iterable
 
 from src import db
 
+MONTHS_SHORT = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."]
 MODE_LABELS = {"onsite": "sur site", "hybrid": "hybride", "remote": "remote", "unknown": "?"}
 CONTRACT_LABELS = {"stage": "stage", "alternance": "alternance", "VIE": "VIE", "working_student": "Werkstudent",
                    "autre": "autre (CDI, CDD…)"}
@@ -24,9 +25,14 @@ def flatten(row: dict[str, Any]) -> dict[str, Any]:
         "entreprise": row.get("employer_name"),
         "ville": ex.get("city") or row.get("job_city"),
         "pays": ex.get("country") or row.get("job_country"),
+        "lieu": ", ".join(x for x in [ex.get("city") or row.get("job_city"), ex.get("country") or row.get("job_country")]
+                          if x) or ("remote" if ex.get("work_mode") == "remote" else ""),
         "mode": MODE_LABELS.get(ex.get("work_mode"), "?") if ex else "?",
         "durée": (f"{lo} mois" if lo == hi else f"{lo or '?'}–{hi or '?'} mois") if (lo or hi) else "",
         "durée_min": lo or hi,
+        "période": " · ".join(x for x in [
+            (f"{lo} mois" if lo == hi else f"{lo or '?'}–{hi or '?'} mois") if (lo or hi) else "",
+            f"{MONTHS_SHORT[int(start[5:7]) - 1]} {start[2:4]}" if start else ""] if x),
         "début": date.fromisoformat(start) if start else None,
         "domaine": ex.get("domain") or "",
         "gratification": ex.get("stipend_monthly_eur"),

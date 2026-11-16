@@ -95,11 +95,11 @@ crit = criteria.load(conn, profile, cfg, user)
 st.caption(f"Critères de {user} : " + ", ".join(crit.titles) + " · " + criteria.describe(crit))
 with st.container(horizontal=True):
     if st.button("Mes offres", icon=":material/work:", type="primary"):
-        st.switch_page("views/2_Offres.py")
+        ui.go("offres")
     if st.button("Nouvelle recherche", icon=":material/search:"):
-        st.switch_page("views/1_Recherche.py")
+        ui.go("recherche")
     if st.button("Candidatures", icon=":material/view_kanban:"):
-        st.switch_page("views/4_Candidatures.py")
+        ui.go("candidatures")
 
 # ---------- Meilleures offres ----------
 st.markdown(f"#### Meilleures offres de {user}")
@@ -118,5 +118,6 @@ for r in kept[:5]:
                         st.badge(text, color="gray")
         with right:
             st.badge(f"{r['score']:.0f}/100", color=ui.score_color(r["score"]), icon=":material/star:")
-            if r["lien"]:
-                st.link_button("Ouvrir", r["lien"], icon=":material/open_in_new:", width="stretch")
+            if st.button("Voir la fiche", key=f"home_open_{r['job_id']}", icon=":material/arrow_forward:",
+                         width="stretch"):
+                ui.open_offer(r["job_id"])
