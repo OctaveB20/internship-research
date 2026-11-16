@@ -87,7 +87,7 @@ def test_search_criteria_ui(env):
     assert set(checked("m_")) == {"janv. 2027", "févr. 2027", "mars 2027"}
     button(at, "Toute l'Europe").click().run()
     assert len(checked("c_")) == 30
-    assert at.metric[2].value == "90"  # 3 intitulés × 30 pays
+    assert any("3 intitulé(s) × 30 pays" in c.value for c in at.caption)  # 90 requêtes
     button(at, "Aucun").click().run()
     assert any("coche au moins un pays" in w.value for w in at.warning)
     assert button(at, "Lancer la recherche").disabled

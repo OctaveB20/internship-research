@@ -31,6 +31,8 @@ LANG_ALIASES = {
     "german": "german", "allemand": "german", "deutsch": "german", "de": "german",
     "spanish": "spanish", "espagnol": "spanish", "spanisch": "spanish", "es": "spanish",
     "italian": "italian", "italien": "italian", "italienisch": "italian", "it": "italian",
+    "dutch": "dutch", "neerlandais": "dutch", "niederlandisch": "dutch", "nl": "dutch",
+    "portuguese": "portuguese", "portugais": "portuguese", "portugiesisch": "portuguese", "pt": "portuguese",
 }
 LEVELS = {
     "native": 5, "natif": 5, "maternelle": 5, "muttersprache": 5, "c2": 5, "bilingual": 5, "bilingue": 5,
@@ -57,6 +59,22 @@ SKILL_ALIASES = {
     "rapprochements bancaires": "reconciliation", "account reconciliation": "reconciliation",
     "kontenabstimmung": "reconciliation", "kontenabstimmungen": "reconciliation",
     "git": "github", "api": "api", "apis": "api", "rest api": "api", "rest apis": "api",
+    "chatgpt": "ai", "chat gpt": "ai", "llm": "ai",
+    "budget forecast": "budget", "budget / forecast": "budget", "budget": "budget", "budgets": "budget", "budgeting": "budget", "forecast": "budget",
+    "forecasts": "budget", "forecasting": "budget", "previsions": "budget", "planification budgetaire": "budget",
+    "budgetplanung": "budget", "planung": "budget",
+    "reportings": "reporting", "management reporting": "reporting", "reporting financier": "reporting",
+    "financial reporting": "reporting", "berichtswesen": "reporting",
+    "analyse des ecarts": "variance analysis", "analyses des ecarts": "variance analysis",
+    "abweichungsanalyse": "variance analysis", "abweichungsanalysen": "variance analysis",
+    "modelisation financiere": "financial modelling", "financial modeling": "financial modelling",
+    "modele financier": "financial modelling", "modeles financiers": "financial modelling",
+    "finanzmodellierung": "financial modelling",
+    "valorisation": "valuation", "company valuation": "valuation", "unternehmensbewertung": "valuation",
+    "konsolidierung": "consolidation",
+    "comptabilite": "accounting", "comptabilite generale": "accounting", "buchhaltung": "accounting",
+    "rechnungswesen": "accounting",
+    "tresorerie": "treasury", "cash management": "treasury",
 }
 STOPWORDS = {"de", "d", "la", "le", "les", "des", "du", "et", "en", "l", "a", "of", "and", "the"}
 

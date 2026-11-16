@@ -7,7 +7,7 @@ import html
 
 import streamlit as st
 
-from src import config, criteria, db, llm
+from src import config, criteria, db, llm, questionnaire
 
 
 def require_password() -> None:
@@ -67,11 +67,27 @@ def get_connection(owner: str = db.DEFAULT_USER) -> db.Database:
 
 CSS = """
 <style>
-.block-container {max-width: 1280px; padding-top: 2.4rem;}
-h1 {letter-spacing: -0.02em;}
-[data-testid="stMetricLabel"] p {font-size: 0.85rem; opacity: 0.75;}
-.scout-label {font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.6; margin-bottom: 0.1rem;}
-.scout-value {font-size: 0.98rem; font-weight: 500; margin-bottom: 0.75rem;}
+.block-container {max-width: 1240px; padding-top: 2.2rem; padding-bottom: 4rem;}
+h1 {letter-spacing: -0.025em; font-weight: 700;}
+h2, h3 {letter-spacing: -0.01em;}
+/* Cadres : ombre légère pour détacher les blocs */
+[data-testid="stVerticalBlockBorderWrapper"]:has(> div > [data-testid="stVerticalBlock"]) {
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+/* Cartes d'indicateurs */
+.scout-stat {border: 1px solid var(--scout-border, rgba(127,127,127,.22)); border-radius: 0.75rem;
+             padding: 0.85rem 1rem; height: 100%; margin-bottom: 0.75rem;}
+.scout-stat .label {font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.62;}
+.scout-stat .value {font-size: 1.7rem; font-weight: 650; line-height: 1.25; margin-top: 0.15rem;}
+.scout-stat .hint {font-size: 0.8rem; opacity: 0.6; margin-top: 0.1rem;}
+/* Libellé / valeur des fiches */
+.scout-label {font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.6; margin-bottom: 0.1rem;}
+.scout-value {font-size: 0.97rem; font-weight: 500; margin-bottom: 0.8rem;}
+/* En-tête de page */
+.scout-kicker {font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.55; margin-bottom: -0.6rem;}
+/* Barre latérale */
+[data-testid="stSidebar"] .scout-user {font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em;
+                                       opacity: 0.6; margin: 0.4rem 0 -0.4rem;}
 </style>
 """
 
@@ -84,9 +100,10 @@ def score_color(score: float | None, eliminated: bool = False) -> str:
 
 
 def metric_card(label: str, value: object, help: str | None = None) -> None:
-    """Indicateur dans un cadre."""
-    with st.container(border=True):
-        st.metric(label, value, help=help)
+    """Indicateur dans un cadre (libellé, grande valeur, précision facultative)."""
+    hint = f"<div class='hint'>{html.escape(help)}</div>" if help else ""
+    st.markdown(f"<div class='scout-stat'><div class='label'>{html.escape(label)}</div>"
+                f"<div class='value'>{html.escape(str(value))}</div>{hint}</div>", unsafe_allow_html=True)
 
 
 def field(label: str, value: object) -> None:
@@ -107,7 +124,7 @@ def current_user(cfg: config.AppConfig) -> str:
 
 
 def user_selector(cfg: config.AppConfig, where=None, key: str = "user_sidebar", label: str = "Utilisateur",
-                  width: int | str = "stretch") -> str:
+                  width: int | str = "stretch", label_visibility: str = "visible") -> str:
     """Liste déroulante des utilisateurs, synchronisée avec les autres sélecteurs de la page."""
     st.session_state[key] = current_user(cfg)
 
@@ -115,11 +132,12 @@ def user_selector(cfg: config.AppConfig, where=None, key: str = "user_sidebar", 
         st.session_state.user = st.session_state[key]
         st.query_params["user"] = st.session_state.user
 
-    (where or st).selectbox(label, cfg.users, key=key, on_change=_changed, width=width)
+    (where or st).selectbox(label, cfg.users, key=key, on_change=_changed, width=width,
+                            label_visibility=label_visibility)
     return current_user(cfg)
 
 
-def setup_page(title: str, icon: str = ":material/target:", subtitle: str = ""
+def setup_page(title: str, icon: str = ":material/target:", subtitle: str = "", show_title: bool = True
                ) -> tuple[db.Database, config.AppConfig, config.Profile]:
     """À appeler en tête de chaque page. Renvoie (connexion, config, profil)."""
     st.set_page_config(page_title=f"{title} · Internship Scout", page_icon=icon, layout="wide")
@@ -135,8 +153,9 @@ def setup_page(title: str, icon: str = ":material/target:", subtitle: str = ""
         st.stop()
     conn = get_connection(cfg.users[0])
     with st.sidebar:
-        user = user_selector(cfg, label="Utilisateur")
-    base = config.load_profile(user=user)  # profil de cette personne (profile.yaml, section users)
+        st.markdown("<div class='scout-user'>Profil actif</div>", unsafe_allow_html=True)
+        user = user_selector(cfg, label="Utilisateur", label_visibility="collapsed")
+    base = questionnaire.user_profile(conn, user)  # profile.yaml + réponses au questionnaire de l'accueil
     # + critères de sa page Recherche
     profile = criteria.effective_profile(conn, base, criteria.load(conn, base, cfg, user), user)
     signature = hashlib.sha256(profile.model_dump_json().encode()).hexdigest()[:16]
@@ -146,22 +165,18 @@ def setup_page(title: str, icon: str = ":material/target:", subtitle: str = ""
         scoring.score_all(conn, profile, user)
         db.set_setting(conn, f"profile_signature:{user}", signature)
     with st.sidebar:
-        if config.dev_mode():
-            st.info("Mode dev : offres lues dans les fixtures, aucun appel JSearch.")
-        if not llm.has_key(cfg):
-            st.caption(f"IA : clé {config.LLM_KEYS[cfg.llm_provider]} absente.")
-        else:
-            st.caption(f"IA : {cfg.llm_provider} · {cfg.model}")
-        if config.on_streamlit_cloud():
-            if not config.get_secret("APP_PASSWORD"):
-                st.warning("App en ligne sans APP_PASSWORD : toute personne ayant l'URL peut utiliser tes clés.")
-        if conn.is_postgres:
-            st.caption("Base : Postgres")
-        elif config.on_streamlit_cloud():
+        if config.on_streamlit_cloud() and not config.get_secret("APP_PASSWORD"):
+            st.warning("App en ligne sans APP_PASSWORD : toute personne ayant l'URL peut utiliser tes clés.")
+        if not conn.is_postgres and config.on_streamlit_cloud():
             st.warning("Base SQLite temporaire : effacée au redémarrage de l'app. Ajoute DATABASE_URL (base Postgres, ex. Neon).")
-    with st.sidebar:
-        st.caption("Internship Scout · recherche de stage")
-    st.title(title)
-    if subtitle:
-        st.caption(subtitle)
+        status = [f"IA : {cfg.llm_provider} · {cfg.model}" if llm.has_key(cfg)
+                  else f"IA : clé {config.LLM_KEYS[cfg.llm_provider]} absente",
+                  "Base : Postgres" if conn.is_postgres else "Base : SQLite"]
+        if config.dev_mode():
+            status.append("Mode dev : fixtures, aucun appel JSearch")
+        st.caption(" · ".join(status))
+    if show_title:
+        st.title(title)
+        if subtitle:
+            st.caption(subtitle)
     return conn, cfg, profile

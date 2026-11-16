@@ -5,12 +5,12 @@ from datetime import date
 import pandas as pd
 import streamlit as st
 
-from src import config, criteria as crit, extract, jsearch, llm, scoring, ui
+from src import config, criteria as crit, extract, jsearch, llm, questionnaire, scoring, ui
 
 conn, cfg, _ = ui.setup_page("Recherche", ":material/search:",
                               "Choisis tes critères, puis lance la collecte, l'extraction IA et le calcul des scores.")
 user = ui.current_user(cfg)
-base_profile = config.load_profile(user=user)
+base_profile = questionnaire.user_profile(conn, user)
 saved = crit.load(conn, base_profile, cfg, user)
 months = crit.upcoming_months(date.today(), 15)
 
